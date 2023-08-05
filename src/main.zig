@@ -1,5 +1,12 @@
 const std = @import("std");
 
+const tier0 = @import("tier0.zig");
+
+pub const std_options = struct {
+    pub const log_level: std.log.Level = .debug;
+    pub const logFn = @import("log.zig").log;
+};
+
 pub const CreateInterfaceFn = *const fn (name: [*:0]const u8, ret: ?*c_int) callconv(.C) ?*align(@alignOf(*anyopaque)) anyopaque;
 
 const Method = std.builtin.CallingConvention.Thiscall;
@@ -8,10 +15,16 @@ fn load(_: *anyopaque, interfaceFactory: CreateInterfaceFn, gameServerFactory: C
     _ = interfaceFactory;
     _ = gameServerFactory;
 
+    tier0.init() catch {
+        return false;
+    };
+
     return true;
 }
 
-fn unload(_: *anyopaque) callconv(Method) void {}
+fn unload(_: *anyopaque) callconv(Method) void {
+    tier0.ready = false;
+}
 
 fn pause(_: *anyopaque) callconv(Method) void {}
 
@@ -110,7 +123,7 @@ const vtalbe_plugin = [_]*anyopaque{
 var plugin = &vtalbe_plugin;
 
 export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*anyopaque {
-    if (!std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS001")) {
+    if (std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS001")) {
         if (ret) |r| r.* = 0;
         return @ptrCast(&plugin);
     }
