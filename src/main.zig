@@ -1,85 +1,112 @@
 const std = @import("std");
 
+const interfaces = @import("interfaces.zig");
 const tier0 = @import("tier0.zig");
+const convar = @import("convar.zig");
 
 pub const std_options = struct {
     pub const log_level: std.log.Level = .debug;
     pub const logFn = @import("log.zig").log;
 };
 
-pub const CreateInterfaceFn = *const fn (name: [*:0]const u8, ret: ?*c_int) callconv(.C) ?*align(@alignOf(*anyopaque)) anyopaque;
+const Virtual = std.builtin.CallingConvention.Thiscall;
 
-const Method = std.builtin.CallingConvention.Thiscall;
+pub var test_cvar = convar.ConVar{
+    .base = .{
+        .name = "test_cvar",
+        .help_str = "test",
+        .flags = .{ .cheat = true },
+    },
+    .default_value = "1",
+};
 
-fn load(_: *anyopaque, interfaceFactory: CreateInterfaceFn, gameServerFactory: CreateInterfaceFn) callconv(Method) bool {
-    _ = interfaceFactory;
-    _ = gameServerFactory;
+pub var test_cmd = convar.ConCommand{
+    .base = .{
+        .name = "test_cmd",
+        .help_str = "test",
+    },
+    .command_callback = test_cmd_Fn,
+};
+
+fn test_cmd_Fn() callconv(.C) void {
+    std.log.info("argc = {}", .{interfaces.engine.cmdArgc()});
+    test_cvar.setInt(0);
+}
+
+fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServerFactory: interfaces.CreateInterfaceFn) callconv(Virtual) bool {
+    interfaces.engineFactory = interfaceFactory;
+    interfaces.serverFactory = gameServerFactory;
 
     tier0.init() catch {
         return false;
     };
 
+    interfaces.engine = @ptrCast(interfaces.engineFactory("VEngineClient012", null) orelse {
+        std.log.err("Failed to get VEngineClient", .{});
+        return false;
+    });
+
+    if (!convar.init()) {
+        return false;
+    }
+
+    test_cvar.register();
+    test_cmd.register();
+
     return true;
 }
 
-fn unload(_: *anyopaque) callconv(Method) void {
+fn unload(_: *anyopaque) callconv(Virtual) void {
+    convar.deinit();
     tier0.ready = false;
 }
 
-fn pause(_: *anyopaque) callconv(Method) void {}
+fn pause(_: *anyopaque) callconv(Virtual) void {}
 
-fn unpause(_: *anyopaque) callconv(Method) void {}
+fn unpause(_: *anyopaque) callconv(Virtual) void {}
 
-fn getPluginDescription(_: *anyopaque) callconv(Method) [*:0]const u8 {
+fn getPluginDescription(_: *anyopaque) callconv(Virtual) [*:0]const u8 {
     return "zig plugin";
 }
 
-fn levelInit(_: *anyopaque, map_name: [*:0]const u8) callconv(Method) void {
+fn levelInit(_: *anyopaque, map_name: [*:0]const u8) callconv(Virtual) void {
     _ = map_name;
 }
 
-pub const Edict = extern struct {
-    state_flags: c_int,
-    network_serial_number: c_int,
-    networkable: *anyopaque,
-    unk: *anyopaque,
-    freetime: f32,
-};
-
-fn serverActivate(_: *anyopaque, edict_list: [*]Edict, edict_count: c_int, client_max: c_int) callconv(Method) void {
+fn serverActivate(_: *anyopaque, edict_list: [*]*anyopaque, edict_count: c_int, client_max: c_int) callconv(Virtual) void {
     _ = edict_list;
     _ = edict_count;
     _ = client_max;
 }
 
-fn gameFrame(_: *anyopaque, simulating: bool) callconv(Method) void {
+fn gameFrame(_: *anyopaque, simulating: bool) callconv(Virtual) void {
     _ = simulating;
 }
 
-fn levelShutdown(_: *anyopaque) callconv(Method) void {}
+fn levelShutdown(_: *anyopaque) callconv(Virtual) void {}
 
-fn clientActive(_: *anyopaque, entity: *Edict) callconv(Method) void {
+fn clientActive(_: *anyopaque, entity: *anyopaque) callconv(Virtual) void {
     _ = entity;
 }
 
-fn clientDisconnect(_: *anyopaque, entity: *Edict) callconv(Method) void {
+fn clientDisconnect(_: *anyopaque, entity: *anyopaque) callconv(Virtual) void {
     _ = entity;
 }
 
-fn clientPutInServer(_: *anyopaque, entity: *Edict, player_name: [*:0]const u8) callconv(Method) void {
+fn clientPutInServer(_: *anyopaque, entity: *anyopaque, player_name: [*:0]const u8) callconv(Virtual) void {
     _ = entity;
     _ = player_name;
 }
 
-fn setCommandClient(_: *anyopaque, index: c_int) callconv(Method) void {
+fn setCommandClient(_: *anyopaque, index: c_int) callconv(Virtual) void {
     _ = index;
 }
 
-fn clientSettingsChanged(_: *anyopaque, entity: *Edict) callconv(Method) void {
+fn clientSettingsChanged(_: *anyopaque, entity: *anyopaque) callconv(Virtual) void {
     _ = entity;
 }
 
-fn clientConnect(_: *anyopaque, allow: *bool, entity: *Edict, name: [*:0]const u8, addr: [*:0]const u8, reject: [*:0]u8, max_reject_len: c_int) callconv(Method) c_int {
+fn clientConnect(_: *anyopaque, allow: *bool, entity: *anyopaque, name: [*:0]const u8, addr: [*:0]const u8, reject: [*:0]u8, max_reject_len: c_int) callconv(Virtual) c_int {
     _ = allow;
     _ = entity;
     _ = name;
@@ -89,40 +116,40 @@ fn clientConnect(_: *anyopaque, allow: *bool, entity: *Edict, name: [*:0]const u
     return 0;
 }
 
-fn clientCommand(_: *anyopaque, entity: *Edict) callconv(Method) c_int {
+fn clientCommand(_: *anyopaque, entity: *anyopaque) callconv(Virtual) c_int {
     _ = entity;
     return 0;
 }
 
-fn networkIdValidated(_: *anyopaque, user_name: [*:0]const u8, network_id: [*:0]const u8) callconv(Method) c_int {
+fn networkIdValidated(_: *anyopaque, user_name: [*:0]const u8, network_id: [*:0]const u8) callconv(Virtual) c_int {
     _ = user_name;
     _ = network_id;
     return 0;
 }
 
-const vtalbe_plugin = [_]*anyopaque{
-    @ptrCast(@constCast(&load)),
-    @ptrCast(@constCast(&unload)),
-    @ptrCast(@constCast(&pause)),
-    @ptrCast(@constCast(&unpause)),
-    @ptrCast(@constCast(&getPluginDescription)),
-    @ptrCast(@constCast(&levelInit)),
-    @ptrCast(@constCast(&serverActivate)),
-    @ptrCast(@constCast(&gameFrame)),
-    @ptrCast(@constCast(&levelShutdown)),
-    @ptrCast(@constCast(&clientActive)),
-    @ptrCast(@constCast(&clientDisconnect)),
-    @ptrCast(@constCast(&clientPutInServer)),
-    @ptrCast(@constCast(&setCommandClient)),
-    @ptrCast(@constCast(&clientSettingsChanged)),
-    @ptrCast(@constCast(&clientConnect)),
-    @ptrCast(@constCast(&clientCommand)),
-    @ptrCast(@constCast(&networkIdValidated)),
+const vtalbe_plugin = [_]*const anyopaque{
+    &load,
+    &unload,
+    &pause,
+    &unpause,
+    &getPluginDescription,
+    &levelInit,
+    &serverActivate,
+    &gameFrame,
+    &levelShutdown,
+    &clientActive,
+    &clientDisconnect,
+    &clientPutInServer,
+    &setCommandClient,
+    &clientSettingsChanged,
+    &clientConnect,
+    &clientCommand,
+    &networkIdValidated,
 };
 
-var plugin = &vtalbe_plugin;
+const plugin = &vtalbe_plugin;
 
-export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*anyopaque {
+export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*const anyopaque {
     if (std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS001")) {
         if (ret) |r| r.* = 0;
         return @ptrCast(&plugin);
