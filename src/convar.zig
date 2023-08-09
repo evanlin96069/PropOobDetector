@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const interfaces = @import("interfaces.zig");
+const modules = @import("modules.zig");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
@@ -251,29 +252,53 @@ const ICvar = extern struct {
 
 pub var icvar: *ICvar = undefined;
 
-pub fn init() bool {
+const cvars: []const *ConCommandBase = vars: {
+    var vars: []const *ConCommandBase = &.{};
+    for (&.{
+        @import("main.zig"),
+    }) |file| {
+        for (@typeInfo(file).Struct.decls) |decl| {
+            const decl_ptr = &@field(file, decl.name);
+            const decl_type = @TypeOf(decl_ptr.*);
+            if (decl_type == ConCommand or decl_type == ConVar) {
+                const base: *ConCommandBase = @ptrCast(decl_ptr);
+                vars = vars ++ .{base};
+            }
+        }
+    }
+    break :vars vars;
+};
+
+pub var module = modules.Module{
+    .init = init,
+    .deinit = deinit,
+};
+
+fn init() void {
+    module.loaded = false;
+
     icvar = @ptrCast(interfaces.engineFactory("VEngineCvar003", null) orelse {
         std.log.err("Failed to get ICvar interface", .{});
-        return false;
+        return;
     });
 
     const cvar = icvar.findVar("sv_gravity") orelse {
         std.log.err("Failed to get ConVar vtable", .{});
-        return false;
+        return;
     };
     const cmd = icvar.findCommand("kill") orelse {
         std.log.err("Failed to get ConCommand vtable", .{});
-        return false;
+        return;
     };
 
     // Stealing vtables from existing command and cvar
     ConVar.vtable = cvar.base._vt;
     ConCommand.vtable = cmd._vt;
 
-    return true;
+    module.loaded = true;
 }
 
-pub fn deinit() void {
+fn deinit() void {
     var head: *?*ConCommandBase = icvar.getGlobalCommandListHead() orelse return;
     var prev: ?*ConCommandBase = null;
     var it: ?*ConCommandBase = head.*;
@@ -301,20 +326,3 @@ pub fn deinit() void {
         // We probably need to free the cvar string, but calling the destructor crashes...
     }
 }
-
-const cvars: []const *ConCommandBase = vars: {
-    var vars: []const *ConCommandBase = &.{};
-    for (&.{
-        @import("main.zig"),
-    }) |file| {
-        for (@typeInfo(file).Struct.decls) |decl| {
-            const decl_ptr = &@field(file, decl.name);
-            const decl_type = @TypeOf(decl_ptr.*);
-            if (decl_type == ConCommand or decl_type == ConVar) {
-                const base: *ConCommandBase = @ptrCast(decl_ptr);
-                vars = vars ++ .{base};
-            }
-        }
-    }
-    break :vars vars;
-};

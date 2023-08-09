@@ -1,6 +1,8 @@
 const std = @import("std");
 
+const modules = @import("modules.zig");
 const interfaces = @import("interfaces.zig");
+const engine = @import("engine.zig");
 const tier0 = @import("tier0.zig");
 const convar = @import("convar.zig");
 
@@ -29,7 +31,7 @@ pub var test_cmd = convar.ConCommand{
 };
 
 fn test_cmd_Fn() callconv(.C) void {
-    std.log.info("argc = {}", .{interfaces.engine.cmdArgc()});
+    std.log.info("argc = {}", .{engine.client.cmdArgc()});
     test_cvar.setInt(0);
 }
 
@@ -41,12 +43,7 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
         return false;
     };
 
-    interfaces.engine = @ptrCast(interfaces.engineFactory("VEngineClient012", null) orelse {
-        std.log.err("Failed to get VEngineClient", .{});
-        return false;
-    });
-
-    if (!convar.init()) {
+    if (!modules.init()) {
         return false;
     }
 
@@ -57,7 +54,7 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
 }
 
 fn unload(_: *anyopaque) callconv(Virtual) void {
-    convar.deinit();
+    modules.deinit();
     tier0.ready = false;
 }
 
