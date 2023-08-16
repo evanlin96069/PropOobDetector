@@ -5,8 +5,30 @@ pub const CreateInterfaceFn = *const fn (name: [*:0]const u8, ret: ?*c_int) call
 pub var engineFactory: CreateInterfaceFn = undefined;
 pub var serverFactory: CreateInterfaceFn = undefined;
 
+const InterfaceInfo = struct {
+    version: u32,
+    interface: *align(@alignOf(*anyopaque)) anyopaque,
+};
+
+pub fn create(factory: CreateInterfaceFn, comptime name: []const u8, comptime versions: anytype) ?InterfaceInfo {
+    const version_array: [versions.len]u32 = versions;
+    inline for (version_array) |version| {
+        if (version > 999) {
+            @compileError("Version too high");
+        }
+        const version_string = comptime std.fmt.comptimePrint("{s}{d:0>3}", .{ name, version });
+        if (factory(version_string, null)) |interface| {
+            return InterfaceInfo{
+                .version = version,
+                .interface = interface,
+            };
+        }
+    }
+    return null;
+}
+
 pub const IAppSystem = extern struct {
-    _vt: *align(4) const anyopaque,
+    _vt: *align(@alignOf(*anyopaque)) const anyopaque,
 
     pub const VTable = extern struct {
         connect: *const anyopaque,

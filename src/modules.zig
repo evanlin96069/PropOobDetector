@@ -7,8 +7,8 @@ pub const Module = struct {
 const modules: []const *Module = mods: {
     var mods: []const *Module = &.{};
     for (&.{
-        @import("engine.zig"),
         @import("convar.zig"),
+        @import("hud.zig"),
     }) |file| {
         mods = mods ++ .{&file.module};
     }

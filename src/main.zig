@@ -2,7 +2,6 @@ const std = @import("std");
 
 const modules = @import("modules.zig");
 const interfaces = @import("interfaces.zig");
-const engine = @import("engine.zig");
 const tier0 = @import("tier0.zig");
 const convar = @import("convar.zig");
 
@@ -13,13 +12,17 @@ pub const std_options = struct {
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
-pub var test_cvar = convar.ConVar{
-    .base = .{
-        .name = "test_cvar",
-        .help_str = "test",
-        .flags = .{ .cheat = true },
+pub var test_cvar = convar.Variable{
+    .cvar = .{
+        .base1 = .{
+            .name = "test_cvar",
+            .help_str = "test",
+            .flags = .{
+                .cheat = true,
+            },
+        },
+        .default_value = "1",
     },
-    .default_value = "1",
 };
 
 pub var test_cmd = convar.ConCommand{
@@ -30,8 +33,8 @@ pub var test_cmd = convar.ConCommand{
     .command_callback = test_cmd_Fn,
 };
 
-fn test_cmd_Fn() callconv(.C) void {
-    std.log.info("argc = {}", .{engine.client.cmdArgc()});
+fn test_cmd_Fn(args: *const convar.CCommand) callconv(.C) void {
+    _ = args;
     test_cvar.setInt(0);
 }
 
@@ -113,8 +116,9 @@ fn clientConnect(_: *anyopaque, allow: *bool, entity: *anyopaque, name: [*:0]con
     return 0;
 }
 
-fn clientCommand(_: *anyopaque, entity: *anyopaque) callconv(Virtual) c_int {
+fn clientCommand(_: *anyopaque, entity: *anyopaque, args: *const anyopaque) callconv(Virtual) c_int {
     _ = entity;
+    _ = args;
     return 0;
 }
 
@@ -122,6 +126,14 @@ fn networkIdValidated(_: *anyopaque, user_name: [*:0]const u8, network_id: [*:0]
     _ = user_name;
     _ = network_id;
     return 0;
+}
+
+fn onQueryCvarValueFinished(_: *anyopaque, cookie: c_int, player_entity: *anyopaque, status: c_int, cvar_name: [*:0]const u8, cvar_value: [*:0]const u8) callconv(Virtual) void {
+    _ = cvar_value;
+    _ = cvar_name;
+    _ = status;
+    _ = player_entity;
+    _ = cookie;
 }
 
 const vtalbe_plugin = [_]*const anyopaque{
@@ -142,12 +154,13 @@ const vtalbe_plugin = [_]*const anyopaque{
     &clientConnect,
     &clientCommand,
     &networkIdValidated,
+    &onQueryCvarValueFinished,
 };
 
 const plugin = &vtalbe_plugin;
 
 export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*const anyopaque {
-    if (std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS001")) {
+    if (std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS002")) {
         if (ret) |r| r.* = 0;
         return @ptrCast(&plugin);
     }
