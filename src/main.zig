@@ -38,7 +38,17 @@ fn test_cmd_Fn(args: *const convar.CCommand) callconv(.C) void {
     test_cvar.setInt(0);
 }
 
+var plugin_loaded: bool = false;
+var skip_unload: bool = false;
+
 fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServerFactory: interfaces.CreateInterfaceFn) callconv(Virtual) bool {
+    if (plugin_loaded) {
+        std.log.warn("Plugin already loaded", .{});
+        skip_unload = true;
+        return false;
+    }
+    plugin_loaded = true;
+
     interfaces.engineFactory = interfaceFactory;
     interfaces.serverFactory = gameServerFactory;
 
@@ -57,8 +67,14 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
 }
 
 fn unload(_: *anyopaque) callconv(Virtual) void {
+    if (skip_unload) {
+        skip_unload = false;
+        return;
+    }
+
     modules.deinit();
     tier0.ready = false;
+    plugin_loaded = false;
 }
 
 fn pause(_: *anyopaque) callconv(Virtual) void {}
