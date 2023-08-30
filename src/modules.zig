@@ -1,16 +1,38 @@
 pub const Module = struct {
     init: *const fn () void,
     deinit: *const fn () void,
+
+    loaded: bool = false,
+};
+
+pub const Feature = struct {
+    init: *const fn () void,
+    deinit: *const fn () void,
+
+    onPaint: ?*const fn () void = null,
+
     loaded: bool = false,
 };
 
 const modules: []const *Module = mods: {
     var mods: []const *Module = &.{};
     for (&.{
+        @import("engine.zig"),
         @import("convar.zig"),
         @import("hud.zig"),
+        @import("datamap.zig"),
     }) |file| {
         mods = mods ++ .{&file.module};
+    }
+    break :mods mods;
+};
+
+const features: []const *Feature = mods: {
+    var mods: []const *Feature = &.{};
+    for (&.{
+        @import("test.zig"),
+    }) |file| {
+        mods = mods ++ .{&file.feature};
     }
     break :mods mods;
 };
@@ -22,14 +44,39 @@ pub fn init() bool {
             return false;
         }
     }
+
+    for (features) |feature| {
+        feature.init();
+    }
+
     return true;
 }
 
 pub fn deinit() void {
     for (modules) |module| {
         if (!module.loaded) {
-            break;
+            return;
         }
         module.deinit();
+        module.loaded = false;
+    }
+
+    for (features) |feature| {
+        if (!feature.loaded) {
+            continue;
+        }
+        feature.deinit();
+        feature.loaded = false;
+    }
+}
+
+pub fn emitPaint() void {
+    for (features) |feature| {
+        if (!feature.loaded) {
+            continue;
+        }
+        if (feature.onPaint) |onPaint| {
+            onPaint();
+        }
     }
 }

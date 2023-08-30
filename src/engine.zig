@@ -10,12 +10,17 @@ pub var module = modules.Module{
     .deinit = deinit,
 };
 
-const Edict = extern struct {
+pub const Edict = extern struct {
     state_flags: c_int,
     network_serial_number: c_int,
     networkable: *anyopaque,
     unknown: *anyopaque,
     freetime: f32,
+
+    pub fn getOffsetField(self: *Edict, comptime T: type, offset: usize) *T {
+        const addr: [*]const u8 = @ptrCast(self.unknown);
+        return @ptrCast(addr + offset);
+    }
 };
 
 const IVEngineServer = extern struct {
@@ -28,11 +33,6 @@ const IVEngineServer = extern struct {
     pub fn pEntityOfEntIndex(self: *IVEngineServer, index: c_int) ?*Edict {
         const _pEntityOfEntIndex: *const fn (this: *anyopaque, index: c_int) callconv(Virtual) ?*Edict = @ptrCast(self._vt[VTIndex.pEntityOfEntIndex]);
         return _pEntityOfEntIndex(self, index);
-    }
-
-    pub fn getPlayer(self: *IVEngineServer) ?*anyopaque {
-        const edict: *Edict = self.pEntityOfEntIndex(1) orelse return null;
-        return edict.unknown;
     }
 };
 
@@ -49,20 +49,24 @@ const IVEngineClient = extern struct {
     }
 };
 
-pub var engine_server: *IVEngineServer = undefined;
-pub var engine_client: *IVEngineClient = undefined;
+pub var server: *IVEngineServer = undefined;
+pub var client: *IVEngineClient = undefined;
 
 fn init() void {
-    engine_server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
+    module.loaded = false;
+
+    server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
         std.log.err("Failed to get IVEngineServer interface", .{});
         return;
     });
 
-    const engine_client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 13, 14 }) orelse {
+    const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 13, 14 }) orelse {
         std.log.err("Failed to get IVEngineClient interface", .{});
         return;
     };
-    engine_client = @ptrCast(engine_client_info.interface);
+    client = @ptrCast(client_info.interface);
+
+    module.loaded = true;
 }
 
 fn deinit() void {}

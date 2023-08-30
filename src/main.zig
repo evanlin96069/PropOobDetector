@@ -3,7 +3,7 @@ const std = @import("std");
 const modules = @import("modules.zig");
 const interfaces = @import("interfaces.zig");
 const tier0 = @import("tier0.zig");
-const convar = @import("convar.zig");
+const core = @import("core.zig");
 
 pub const std_options = struct {
     pub const log_level: std.log.Level = .debug;
@@ -11,32 +11,6 @@ pub const std_options = struct {
 };
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
-
-pub var test_cvar = convar.Variable{
-    .cvar = .{
-        .base1 = .{
-            .name = "test_cvar",
-            .help_str = "test",
-            .flags = .{
-                .cheat = true,
-            },
-        },
-        .default_value = "1",
-    },
-};
-
-pub var test_cmd = convar.ConCommand{
-    .base = .{
-        .name = "test_cmd",
-        .help_str = "test",
-    },
-    .command_callback = test_cmd_Fn,
-};
-
-fn test_cmd_Fn(args: *const convar.CCommand) callconv(.C) void {
-    _ = args;
-    test_cvar.setInt(0);
-}
 
 var plugin_loaded: bool = false;
 var skip_unload: bool = false;
@@ -52,6 +26,8 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
     interfaces.engineFactory = interfaceFactory;
     interfaces.serverFactory = gameServerFactory;
 
+    core.init();
+
     tier0.init() catch {
         return false;
     };
@@ -59,9 +35,6 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
     if (!modules.init()) {
         return false;
     }
-
-    test_cvar.register();
-    test_cmd.register();
 
     return true;
 }
@@ -74,6 +47,8 @@ fn unload(_: *anyopaque) callconv(Virtual) void {
 
     modules.deinit();
     tier0.ready = false;
+    core.deinit();
+
     plugin_loaded = false;
 }
 

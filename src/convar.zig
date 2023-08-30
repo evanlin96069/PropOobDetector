@@ -75,6 +75,10 @@ pub const CCommand = extern struct {
 
     const max_argc = 64;
     const max_length = 512;
+
+    pub fn args(self: *const CCommand, index: usize) []const u8 {
+        return std.mem.span(self.argv[index]);
+    }
 };
 
 pub const ConCommand = extern struct {

@@ -28,8 +28,7 @@ const Panel = extern struct {
 
     fn hookedPaint(this: *Panel) callconv(Virtual) void {
         if (this == toolspanel) {
-            imatsystem.drawSetColor(.{ .r = 0, .g = 255, .b = 255 });
-            imatsystem.drawFilledRect(0, 0, 200, 100);
+            modules.emitPaint();
         }
         origPaint(this);
     }
