@@ -18,6 +18,7 @@ const modules: []const *Module = mods: {
     var mods: []const *Module = &.{};
     for (&.{
         @import("engine.zig"),
+        @import("client.zig"),
         @import("convar.zig"),
         @import("hud.zig"),
         @import("datamap.zig"),

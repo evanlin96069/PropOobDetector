@@ -10,6 +10,16 @@ const InterfaceInfo = struct {
     interface: *align(@alignOf(*anyopaque)) anyopaque,
 };
 
+fn getProcAddress(comptime module_name: []const u8, comptime name: [:0]const u8) !CreateInterfaceFn {
+    var lib = try std.DynLib.open(module_name);
+    defer lib.close();
+    return lib.lookup(CreateInterfaceFn, name) orelse return error.SymbolNotFound;
+}
+
+pub fn getFactory(comptime module_name: []const u8) ?CreateInterfaceFn {
+    return getProcAddress(module_name, "CreateInterface") catch return null;
+}
+
 pub fn create(factory: CreateInterfaceFn, comptime name: []const u8, comptime versions: anytype) ?InterfaceInfo {
     const version_array: [versions.len]u32 = versions;
     inline for (version_array) |version| {
