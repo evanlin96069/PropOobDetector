@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const core = @import("core.zig");
 const interfaces = @import("interfaces.zig");
 const modules = @import("modules.zig");
 const hook = @import("hook.zig");
@@ -132,6 +133,40 @@ const IMatSystemSurface = extern struct {
         const _drawSetTextPos: *const fn (this: *anyopaque, x: c_int, y: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawSetTextPos]);
         _drawSetTextPos(self, x, y);
     }
+
+    pub fn drawPrintText(self: *IMatSystemSurface, comptime fmt: []const u8, args: anytype) void {
+        const _drawPrintText: *const fn (this: *anyopaque, text: [*]u16, text_len: c_int, draw_type: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawPrintText]);
+
+        const text = std.fmt.allocPrint(core.gpa, fmt, args) catch {
+            return;
+        };
+
+        defer core.gpa.free(text);
+
+        const utf16_len = std.unicode.calcUtf16LeLen(text) catch {
+            return;
+        };
+        const utf16_buf = core.gpa.alloc(u16, utf16_len) catch {
+            return;
+        };
+        defer core.gpa.free(utf16_buf);
+
+        _ = std.unicode.utf8ToUtf16Le(utf16_buf, text) catch {
+            return;
+        };
+
+        _drawPrintText(self, utf16_buf.ptr, @intCast(utf16_buf.len), 0);
+    }
+
+    pub fn getScreenSize(self: *IMatSystemSurface, wide: *c_int, tall: *c_int) void {
+        const _getScreenSize: *const fn (this: *anyopaque, wide: *c_int, tall: *c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.getScreenSize]);
+        return _getScreenSize(self, wide, tall);
+    }
+
+    pub fn getFontTall(self: *IMatSystemSurface, font: c_ulong) c_int {
+        const _getFontTall: *const fn (this: *anyopaque, font: c_ulong) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.getFontTall]);
+        return _getFontTall(self, font);
+    }
 };
 
 const ISchemeManager = extern struct {
@@ -147,8 +182,8 @@ const ISchemeManager = extern struct {
         return _getDefaultScheme(self);
     }
 
-    fn getIScheme(self: *ISchemeManager, font: c_ulong) *IScheme {
-        const _getIScheme: *const fn (this: *anyopaque, font: c_ulong) callconv(Virtual) *IScheme = @ptrCast(self._vt[VTIndex.getIScheme]);
+    fn getIScheme(self: *ISchemeManager, font: c_ulong) ?*IScheme {
+        const _getIScheme: *const fn (this: *anyopaque, font: c_ulong) callconv(Virtual) ?*IScheme = @ptrCast(self._vt[VTIndex.getIScheme]);
         return _getIScheme(self, font);
     }
 };
@@ -193,6 +228,16 @@ fn init() void {
         },
         else => unreachable,
     }
+
+    ischeme_mgr = @ptrCast(interfaces.engineFactory("VGUI_Scheme010", null) orelse {
+        std.log.err("Failed to get ISchemeManager interface", .{});
+        return;
+    });
+
+    ischeme = ischeme_mgr.getIScheme(ischeme_mgr.getDefaultScheme()) orelse {
+        std.log.err("Failed to get IScheme", .{});
+        return;
+    };
 
     ienginevgui = @ptrCast(interfaces.engineFactory("VEngineVGui001", null) orelse {
         std.log.err("Failed to get IEngineVgui interface", .{});

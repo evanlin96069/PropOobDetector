@@ -39,8 +39,8 @@ fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
         return;
     }
 
-    if (datamap.server_map.get(args.args(1))) |player_map| {
-        var it = player_map.iterator();
+    if (datamap.server_map.get(args.args(1))) |map| {
+        var it = map.iterator();
         while (it.next()) |kv| {
             std.log.info("{s}: {}", .{ kv.key_ptr.*, kv.value_ptr.* });
         }
@@ -49,10 +49,14 @@ fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
+var font: c_ulong = 0;
+
 fn init() void {
     feature.loaded = false;
 
     datamap_print.register();
+
+    font = hud.ischeme.getFont("DefaultFixedOutline", false);
 
     feature.loaded = true;
 }
@@ -60,6 +64,11 @@ fn init() void {
 fn deinit() void {}
 
 fn onPaint() void {
+    hud.imatsystem.drawSetTextPos(128, 128);
+    hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 255, .b = 255 });
+    hud.imatsystem.drawSetTextFont(font);
+    hud.imatsystem.drawPrintText("Test: {s}", .{"Hello world!"});
+
     hud.imatsystem.drawSetColor(.{ .r = 0, .g = 255, .b = 255 });
     hud.imatsystem.drawFilledRect(0, 0, 100, 200);
 }
