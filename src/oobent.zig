@@ -36,15 +36,25 @@ const EntityInfo = struct {
 
 var oob_ents: std.ArrayList(EntityInfo) = undefined;
 
-var oob_ent_print = convar.ConCommand{
+var pod_print_oob_ent = convar.ConCommand{
     .base = .{
-        .name = "oob_ent_print",
-        .help_str = "Print oob entities",
+        .name = "pod_print_oob_ent",
+        .help_str = "Prints entities that are oob.",
     },
-    .command_callback = oob_ent_print_Fn,
+    .command_callback = print_oob_ent_Fn,
 };
 
-fn oob_ent_print_Fn(args: *const convar.CCommand) callconv(.C) void {
+var pod_hud_oob_ent = convar.Variable{
+    .cvar = .{
+        .base1 = .{
+            .name = "pod_hud_oob_ent",
+            .help_str = "Shows entities that are oob.",
+        },
+        .default_value = "0",
+    },
+};
+
+fn print_oob_ent_Fn(args: *const convar.CCommand) callconv(.C) void {
     _ = args;
 
     if (engine.server.pEntityOfEntIndex(0) == null) {
@@ -165,7 +175,8 @@ fn init() void {
 
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);
 
-    oob_ent_print.register();
+    pod_print_oob_ent.register();
+    pod_hud_oob_ent.register();
 
     oob_ents = std.ArrayList(EntityInfo).init(core.gpa);
 

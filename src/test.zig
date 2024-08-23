@@ -10,15 +10,18 @@ pub var feature = modules.Feature{
     .deinit = deinit,
 };
 
-var datamap_print = convar.ConCommand{
+var pod_print_datamap = convar.ConCommand{
     .base = .{
-        .name = "datamap_print",
-        .help_str = "Print datamap",
+        .name = "pod_print_datamap",
+        .flags = .{
+            .hidden = true,
+        },
+        .help_str = "Prints datamap of a class.",
     },
-    .command_callback = datamap_print_Fn,
+    .command_callback = print_datamap_Fn,
 };
 
-fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
+fn print_datamap_Fn(args: *const convar.CCommand) callconv(.C) void {
     if (args.argc != 2) {
         std.log.info("Usage: datamap_print <class name>", .{});
         return;
@@ -37,7 +40,7 @@ fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
 fn init() void {
     feature.loaded = false;
 
-    datamap_print.register();
+    pod_print_datamap.register();
 
     feature.loaded = true;
 }

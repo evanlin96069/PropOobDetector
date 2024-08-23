@@ -57,7 +57,7 @@ fn pause(_: *anyopaque) callconv(Virtual) void {}
 fn unpause(_: *anyopaque) callconv(Virtual) void {}
 
 fn getPluginDescription(_: *anyopaque) callconv(Virtual) [*:0]const u8 {
-    return "zig plugin";
+    return "Prop Oob Detector - evanlin96069";
 }
 
 fn levelInit(_: *anyopaque, map_name: [*:0]const u8) callconv(Virtual) void {
