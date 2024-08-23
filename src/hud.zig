@@ -12,26 +12,35 @@ pub var module = modules.Module{
     .deinit = deinit,
 };
 
-const Panel = extern struct {
+const IPanel = extern struct {
     _vt: [*]*const anyopaque,
 
     const VTIndex = struct {
-        var setEnabled: usize = undefined;
-        var paint: usize = undefined;
+        var getName: usize = undefined;
+        var paintTraverse: usize = undefined;
     };
 
-    var origPaint: *const fn (this: *anyopaque) callconv(Virtual) void = undefined;
+    var origPaintTraverse: *const fn (this: *anyopaque, vgui_panel: u32, force_repaint: bool, allow_force: bool) callconv(Virtual) void = undefined;
 
-    fn setEnabled(self: *Panel, state: bool) void {
-        const _setEnabled: *const fn (this: *anyopaque, state: bool) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.setEnabled]);
-        _setEnabled(self, state);
+    var panel_id: u32 = 0;
+    var found_panel_id: bool = false;
+
+    fn getName(self: *IPanel, panel: u32) [*:0]const u8 {
+        const _setEnabled: *const fn (this: *anyopaque, panel: u32) callconv(Virtual) [*:0]const u8 = @ptrCast(self._vt[VTIndex.getName]);
+        return _setEnabled(self, panel);
     }
 
-    fn hookedPaint(this: *Panel) callconv(Virtual) void {
-        if (this == toolspanel) {
+    fn hookedPaintTraverse(this: *IPanel, vgui_panel: u32, force_repaint: bool, allow_force: bool) callconv(Virtual) void {
+        origPaintTraverse(this, vgui_panel, force_repaint, allow_force);
+
+        if (!found_panel_id) {
+            if (std.mem.eql(u8, std.mem.span(ipanel.getName(vgui_panel)), "HudCrosshair")) {
+                panel_id = vgui_panel;
+                found_panel_id = true;
+            }
+        } else if (panel_id == vgui_panel) {
             modules.emitPaint();
         }
-        origPaint(this);
     }
 };
 
@@ -50,69 +59,6 @@ const IEngineVGui = extern struct {
 
     pub fn isGameUIVisible(self: *IEngineVGui) bool {
         return self.vt().isGameUIVisible(self);
-    }
-
-    fn findEngineToolsPanelV1(self: *IEngineVGui) bool {
-        var addr: [*]const u8 = @ptrCast(self.vt().getPanel);
-
-        // MOV
-        if (addr[0] != 0x8B) {
-            return false;
-        }
-        addr += 5;
-
-        // CALL
-        if (addr[0] != 0xE8) {
-            return false;
-        }
-        addr += 1;
-        const offset: *align(1) const u32 = @ptrCast(addr);
-        addr += 4;
-
-        const getRootPanel: *const fn (this: *anyopaque, panel_type: c_int) callconv(Virtual) *Panel = @ptrCast(addr + offset.*);
-        toolspanel = getRootPanel(self, 3);
-        return true;
-    }
-
-    fn findEngineToolsPanelV2(self: *IEngineVGui) bool {
-        var addr: [*]const u8 = @ptrCast(self.vt().getPanel);
-
-        // PUSH
-        if (addr[0] != 0x55) {
-            return false;
-        }
-        addr += 1;
-
-        // MOV
-        if (addr[0] != 0x8B) {
-            return false;
-        }
-        addr += 2;
-
-        // PUSH
-        if (addr[0] != 0xFF) {
-            return false;
-        }
-        addr += 3;
-
-        // CALL
-        if (addr[0] != 0xE8) {
-            return false;
-        }
-        addr += 1;
-        const offset: *align(1) const u32 = @ptrCast(addr);
-        addr += 4;
-
-        const getRootPanel: *const fn (this: *anyopaque, panel_type: c_int) callconv(Virtual) *Panel = @ptrCast(addr + offset.*);
-        toolspanel = getRootPanel(self, 3);
-        return true;
-    }
-
-    fn findEngineToolsPanel(self: *IEngineVGui) bool {
-        if (self.findEngineToolsPanelV1()) {
-            return true;
-        }
-        return self.findEngineToolsPanelV2();
     }
 };
 
@@ -244,7 +190,7 @@ const IScheme = extern struct {
 
 pub var imatsystem: *IMatSystemSurface = undefined;
 pub var ienginevgui: *IEngineVGui = undefined;
-var toolspanel: *Panel = undefined;
+var ipanel: *IPanel = undefined;
 var ischeme_mgr: *ISchemeManager = undefined;
 pub var ischeme: *IScheme = undefined;
 
@@ -261,15 +207,15 @@ fn init() void {
             IMatSystemSurface.VTIndex.getScreenSize = 37;
             IMatSystemSurface.VTIndex.getFontTall = 67;
             IMatSystemSurface.VTIndex.getTextSize = 72;
-            Panel.VTIndex.setEnabled = 67;
-            Panel.VTIndex.paint = 123;
+            IPanel.VTIndex.getName = 35;
+            IPanel.VTIndex.paintTraverse = 40;
         },
         8 => {
             IMatSystemSurface.VTIndex.getScreenSize = 38;
             IMatSystemSurface.VTIndex.getFontTall = 69;
             IMatSystemSurface.VTIndex.getTextSize = 75;
-            Panel.VTIndex.setEnabled = 70;
-            Panel.VTIndex.paint = 127;
+            IPanel.VTIndex.getName = 36;
+            IPanel.VTIndex.paintTraverse = 41;
         },
         else => unreachable,
     }
@@ -289,15 +235,13 @@ fn init() void {
         return;
     });
 
-    if (!ienginevgui.findEngineToolsPanel()) {
-        std.log.err("Failed to find tools panel", .{});
+    ipanel = @ptrCast(interfaces.engineFactory("VGUI_Panel009", null) orelse {
+        std.log.err("Failed to get IPanel interface", .{});
         return;
-    }
+    });
 
-    toolspanel.setEnabled(true);
-
-    Panel.origPaint = @ptrCast(hook.hookVirtual(toolspanel._vt, Panel.VTIndex.paint, Panel.hookedPaint) orelse {
-        std.log.err("Failed to hook Paint", .{});
+    IPanel.origPaintTraverse = @ptrCast(hook.hookVirtual(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.hookedPaintTraverse) orelse {
+        std.log.err("Failed to hook PaintTraverse", .{});
         return;
     });
 
@@ -305,5 +249,5 @@ fn init() void {
 }
 
 fn deinit() void {
-    hook.unhookVirtual(toolspanel._vt, Panel.VTIndex.paint, Panel.origPaint);
+    hook.unhookVirtual(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.origPaintTraverse);
 }

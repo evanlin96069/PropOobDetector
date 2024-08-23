@@ -66,7 +66,7 @@ fn print_oob_ent_Fn(args: *const convar.CCommand) callconv(.C) void {
     std.log.info("oob entity count: {d}", .{oob_ents.items.len});
 
     for (oob_ents.items) |ent| {
-        std.log.info("[{d}]{s} <{d:.2}, {d:.2}, {d:.2}>", .{ ent.index, ent.name, ent.pos.x, ent.pos.y, ent.pos.z });
+        std.log.info("({d}) {s} [{d:.2}, {d:.2}, {d:.2}]", .{ ent.index, ent.name, ent.pos.x, ent.pos.y, ent.pos.z });
     }
 }
 
@@ -176,25 +176,27 @@ fn onPaint() void {
         return;
     }
 
+    const x = 2;
+    var offset: c_int = 0;
+
     hud.imatsystem.drawSetTextFont(font_DefaultFixedOutline);
     hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 255, .b = 255 });
-    hud.imatsystem.drawSetTextPos(0, 0);
+    hud.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
 
     if (engine.server.pEntityOfEntIndex(0) == null) {
         hud.imatsystem.drawPrintText("oob entity: Server not loaded", .{});
         return;
     }
 
-    var offset: c_int = 0;
     hud.imatsystem.drawPrintText("oob entity count: {d}", .{oob_ents.items.len});
-    offset += font_DefaultFixedOutline_tall + 2;
+    offset += 1;
 
     hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 200, .b = 200 });
 
     for (oob_ents.items) |ent| {
-        hud.imatsystem.drawSetTextPos(0, offset);
-        hud.imatsystem.drawPrintText("[{d}]{s}", .{ ent.index, ent.name });
-        offset += font_DefaultFixedOutline_tall + 2;
+        hud.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
+        hud.imatsystem.drawPrintText("({d}) {s}", .{ ent.index, ent.name });
+        offset += 1;
     }
 }
 
