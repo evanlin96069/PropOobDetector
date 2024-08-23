@@ -17,6 +17,8 @@ pub var module = modules.Module{
     .deinit = deinit,
 };
 
+pub var sdk_version: u32 = 0;
+
 const IVEngineServer = extern struct {
     _vt: [*]*const anyopaque,
 
@@ -76,11 +78,12 @@ fn init() void {
         return;
     });
 
-    const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 13, 14 }) orelse {
+    const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 14, 13 }) orelse {
         std.log.err("Failed to get IVEngineClient interface", .{});
         return;
     };
     client = @ptrCast(client_info.interface);
+    sdk_version = if (client_info.version == 14) 2013 else 2007;
 
     server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
         std.log.err("Failed to get IVEngineServer interface", .{});

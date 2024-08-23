@@ -1,8 +1,10 @@
 const std = @import("std");
 
 const modules = @import("modules.zig");
-const hook = @import("hook.zig");
 const core = @import("core.zig");
+
+const hook = @import("hook.zig");
+const MatchedPattern = hook.MatchedPattern;
 
 pub var server_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
 pub var client_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
@@ -76,9 +78,12 @@ const DataMap = extern struct {
         num_fields: c_int,
         map: *DataMap,
 
-        fn fromPattern(pattern: [*]const u8) DataMapInfo {
-            const num_fields: *align(1) const c_int = @ptrCast(pattern + 6);
-            const map: *align(1) const *DataMap = @ptrCast(pattern + 12);
+        fn fromPattern(pattern: MatchedPattern) DataMapInfo {
+            const num_field_offset: usize = 6;
+            const map_offset: usize = if (pattern.index == 2) 17 else 12;
+
+            const num_fields: *align(1) const c_int = @ptrCast(pattern.ptr + num_field_offset);
+            const map: *align(1) const *DataMap = @ptrCast(pattern.ptr + map_offset);
             return DataMapInfo{
                 .num_fields = num_fields.*,
                 .map = map.*,
@@ -165,11 +170,14 @@ fn addMap(datamap: *DataMap, dll_map: *std.StringHashMap(std.StringHashMap(usize
     try dll_map.put(key, map);
 }
 
+const datamap_patterns = [_][]const ?u8{
+    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8"),
+    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C3"),
+    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05"),
+};
+
 fn init() void {
     module.loaded = false;
-
-    const datamap_pattern1 = comptime hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8");
-    const datamap_pattern2 = comptime hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C3");
 
     var server_dll = hook.DynLib.open("server.dll") catch {
         return;
@@ -181,21 +189,15 @@ fn init() void {
     };
     defer client_dll.close();
 
-    var server_patterns = std.ArrayList(usize).init(core.gpa);
+    var server_patterns = std.ArrayList(MatchedPattern).init(core.gpa);
     defer server_patterns.deinit();
-    hook.scanAll(server_dll.mem, datamap_pattern1, &server_patterns) catch {
-        return;
-    };
-    hook.scanAll(server_dll.mem, datamap_pattern2, &server_patterns) catch {
+    hook.scanAllPatterns(server_dll.mem, datamap_patterns[0..], &server_patterns) catch {
         return;
     };
 
-    var client_patterns = std.ArrayList(usize).init(core.gpa);
+    var client_patterns = std.ArrayList(MatchedPattern).init(core.gpa);
     defer client_patterns.deinit();
-    hook.scanAll(client_dll.mem, datamap_pattern1, &client_patterns) catch {
-        return;
-    };
-    hook.scanAll(client_dll.mem, datamap_pattern2, &client_patterns) catch {
+    hook.scanAllPatterns(client_dll.mem, datamap_patterns[0..], &client_patterns) catch {
         return;
     };
 
@@ -203,7 +205,7 @@ fn init() void {
     client_map = std.StringHashMap(std.StringHashMap(usize)).init(core.gpa);
 
     for (server_patterns.items) |pattern| {
-        const info = DataMap.DataMapInfo.fromPattern(server_dll.mem.ptr + pattern);
+        const info = DataMap.DataMapInfo.fromPattern(pattern);
 
         if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(server_dll.mem.ptr), server_dll.info.SizeOfImage)) {
             addMap(info.map, &server_map) catch {
@@ -215,7 +217,7 @@ fn init() void {
     }
 
     for (client_patterns.items) |pattern| {
-        const info = DataMap.DataMapInfo.fromPattern(client_dll.mem.ptr + pattern);
+        const info = DataMap.DataMapInfo.fromPattern(pattern);
 
         if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(client_dll.mem.ptr), client_dll.info.SizeOfImage)) {
             addMap(info.map, &client_map) catch {

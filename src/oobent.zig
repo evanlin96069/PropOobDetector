@@ -12,7 +12,6 @@ const datamap = @import("datamap.zig");
 const sdk = @import("sdk.zig");
 const Edict = sdk.Edict;
 const Vector = sdk.Vector;
-const CCollisionProperty = sdk.CCollisionProperty;
 const Ray = sdk.Ray;
 const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
@@ -104,7 +103,7 @@ const ignore_classes = [_][]const u8{
     "func_button",
 };
 
-fn onTick() void {
+fn detect_oob_ent(comptime CCollisionProperty: type) void {
     for (oob_ents.items) |ent| {
         core.gpa.free(ent.name);
     }
@@ -164,6 +163,14 @@ fn onTick() void {
     }
 }
 
+fn onTick() void {
+    if (engine.sdk_version == 2013) {
+        detect_oob_ent(sdk.CCollisionPropertyV2);
+    } else {
+        detect_oob_ent(sdk.CCollisionPropertyV1);
+    }
+}
+
 fn onPaint() void {
     if (!pod_hud_oob_ent.getBool()) {
         return;
@@ -200,6 +207,7 @@ fn init() void {
         field_m_Collision += 4; // m_Collision is not in datamap, use field before it
     } else {
         std.log.info("Cannot find CBaseEntity data map", .{});
+        return;
     }
 
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);

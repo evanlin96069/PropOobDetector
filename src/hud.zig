@@ -16,8 +16,8 @@ const Panel = extern struct {
     _vt: [*]*const anyopaque,
 
     const VTIndex = struct {
-        const setEnabled = 67;
-        const paint: usize = 123;
+        var setEnabled: usize = undefined;
+        var paint: usize = undefined;
     };
 
     var origPaint: *const fn (this: *anyopaque) callconv(Virtual) void = undefined;
@@ -52,7 +52,7 @@ const IEngineVGui = extern struct {
         return self.vt().isGameUIVisible(self);
     }
 
-    fn findEngineToolsPanel(self: *IEngineVGui) bool {
+    fn findEngineToolsPanelV1(self: *IEngineVGui) bool {
         var addr: [*]const u8 = @ptrCast(self.vt().getPanel);
 
         // MOV
@@ -72,6 +72,47 @@ const IEngineVGui = extern struct {
         const getRootPanel: *const fn (this: *anyopaque, panel_type: c_int) callconv(Virtual) *Panel = @ptrCast(addr + offset.*);
         toolspanel = getRootPanel(self, 3);
         return true;
+    }
+
+    fn findEngineToolsPanelV2(self: *IEngineVGui) bool {
+        var addr: [*]const u8 = @ptrCast(self.vt().getPanel);
+
+        // PUSH
+        if (addr[0] != 0x55) {
+            return false;
+        }
+        addr += 1;
+
+        // MOV
+        if (addr[0] != 0x8B) {
+            return false;
+        }
+        addr += 2;
+
+        // PUSH
+        if (addr[0] != 0xFF) {
+            return false;
+        }
+        addr += 3;
+
+        // CALL
+        if (addr[0] != 0xE8) {
+            return false;
+        }
+        addr += 1;
+        const offset: *align(1) const u32 = @ptrCast(addr);
+        addr += 4;
+
+        const getRootPanel: *const fn (this: *anyopaque, panel_type: c_int) callconv(Virtual) *Panel = @ptrCast(addr + offset.*);
+        toolspanel = getRootPanel(self, 3);
+        return true;
+    }
+
+    fn findEngineToolsPanel(self: *IEngineVGui) bool {
+        if (self.findEngineToolsPanelV1()) {
+            return true;
+        }
+        return self.findEngineToolsPanelV2();
     }
 };
 
@@ -210,7 +251,7 @@ pub var ischeme: *IScheme = undefined;
 fn init() void {
     module.loaded = false;
 
-    const imatsystem_info = interfaces.create(interfaces.engineFactory, "MatSystemSurface", .{ 6, 8 }) orelse {
+    const imatsystem_info = interfaces.create(interfaces.engineFactory, "MatSystemSurface", .{ 8, 6 }) orelse {
         std.log.err("Failed to get IMatSystem interface", .{});
         return;
     };
@@ -220,11 +261,15 @@ fn init() void {
             IMatSystemSurface.VTIndex.getScreenSize = 37;
             IMatSystemSurface.VTIndex.getFontTall = 67;
             IMatSystemSurface.VTIndex.getTextSize = 72;
+            Panel.VTIndex.setEnabled = 67;
+            Panel.VTIndex.paint = 123;
         },
         8 => {
             IMatSystemSurface.VTIndex.getScreenSize = 38;
             IMatSystemSurface.VTIndex.getFontTall = 69;
             IMatSystemSurface.VTIndex.getTextSize = 75;
+            Panel.VTIndex.setEnabled = 70;
+            Panel.VTIndex.paint = 127;
         },
         else => unreachable,
     }

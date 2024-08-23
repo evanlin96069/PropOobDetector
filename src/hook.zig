@@ -48,11 +48,11 @@ pub fn parsePattern(comptime str: []const u8) []const ?u8 {
     };
 }
 
-pub fn scanFirst(mem: []const u8, comptime pat: []const ?u8) ?usize {
+pub fn scanFirst(mem: []const u8, pattern: []const ?u8) ?usize {
     var i: usize = 0;
-    while (i < mem.len - pat.len) : (i += 1) {
+    while (i < mem.len - pattern.len) : (i += 1) {
         var found = true;
-        for (pat, 0..) |byte, j| {
+        for (pattern, 0..) |byte, j| {
             if (byte) |b| {
                 if (b != mem[i + j]) {
                     found = false;
@@ -69,11 +69,21 @@ pub fn scanFirst(mem: []const u8, comptime pat: []const ?u8) ?usize {
     return null;
 }
 
-pub fn scanAll(mem: []const u8, comptime pat: []const ?u8, data: *std.ArrayList(usize)) !void {
-    var base: usize = 0;
-    while (scanFirst(mem[base..], pat)) |offset| {
-        try data.append(base + offset);
-        base += offset + pat.len;
+pub const MatchedPattern = struct {
+    index: usize,
+    ptr: [*]const u8,
+};
+
+pub fn scanAllPatterns(mem: []const u8, patterns: []const []const ?u8, data: *std.ArrayList(MatchedPattern)) !void {
+    for (patterns, 0..) |pattern, i| {
+        var base: usize = 0;
+        while (scanFirst(mem[base..], pattern)) |offset| {
+            try data.append(MatchedPattern{
+                .index = i,
+                .ptr = mem.ptr + base + offset,
+            });
+            base += offset + pattern.len;
+        }
     }
 }
 
