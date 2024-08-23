@@ -145,6 +145,12 @@ fn addFields(datamap: *DataMap, base_offset: usize, out_map: *std.StringHashMap(
     }
 }
 
+pub fn getField(comptime T: type, ptr: *anyopaque, offset: usize) *T {
+    const base: [*]u8 = @ptrCast(ptr);
+    const field: *T = @alignCast(@ptrCast(base + offset));
+    return field;
+}
+
 fn addMap(datamap: *DataMap, dll_map: *std.StringHashMap(std.StringHashMap(usize))) !void {
     var map = std.StringHashMap(usize).init(core.gpa);
     errdefer map.deinit();

@@ -83,7 +83,7 @@ pub const DynLib = struct {
     mem: []const u8,
 
     pub fn open(path: []const u8) !DynLib {
-        var lib = try std.DynLib.open(path);
+        const lib = try std.DynLib.open(path);
         var info: std.os.windows.MODULEINFO = undefined;
         if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), lib.dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {
             return error.GetModuleInformation;

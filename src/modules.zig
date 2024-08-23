@@ -9,6 +9,7 @@ pub const Feature = struct {
     init: *const fn () void,
     deinit: *const fn () void,
 
+    onTick: ?*const fn () void = null,
     onPaint: ?*const fn () void = null,
 
     loaded: bool = false,
@@ -32,6 +33,7 @@ const features: []const *Feature = mods: {
     var mods: []const *Feature = &.{};
     for (&.{
         @import("test.zig"),
+        @import("oobent.zig"),
     }) |file| {
         mods = mods ++ .{&file.feature};
     }
@@ -68,6 +70,17 @@ pub fn deinit() void {
         }
         feature.deinit();
         feature.loaded = false;
+    }
+}
+
+pub fn emitTick() void {
+    for (features) |feature| {
+        if (!feature.loaded) {
+            continue;
+        }
+        if (feature.onTick) |onTick| {
+            onTick();
+        }
     }
 }
 

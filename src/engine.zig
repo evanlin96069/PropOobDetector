@@ -3,24 +3,18 @@ const std = @import("std");
 const interfaces = @import("interfaces.zig");
 const modules = @import("modules.zig");
 
+const sdk = @import("sdk.zig");
+const Edict = sdk.Edict;
+const Vector = sdk.Vector;
+const Ray = sdk.Ray;
+const Trace = sdk.Trace;
+const ITraceFilter = sdk.ITraceFilter;
+
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
 pub var module = modules.Module{
     .init = init,
     .deinit = deinit,
-};
-
-pub const Edict = extern struct {
-    state_flags: c_int,
-    network_serial_number: c_int,
-    networkable: *anyopaque,
-    unknown: *anyopaque,
-    freetime: f32,
-
-    pub fn getOffsetField(self: *Edict, comptime T: type, offset: usize) *T {
-        const addr: [*]const u8 = @ptrCast(self.unknown);
-        return @ptrCast(addr + offset);
-    }
 };
 
 const IVEngineServer = extern struct {
@@ -49,8 +43,30 @@ const IVEngineClient = extern struct {
     }
 };
 
+const IEngineTrace = extern struct {
+    _vt: [*]*const anyopaque,
+
+    const VTIndex = struct {
+        const traceRay = 4;
+        const pointOutsideWorld = 16;
+    };
+
+    pub fn traceRay(self: *IEngineTrace, ray: *const Ray, mask: c_uint, filter: ?*ITraceFilter, trace: *Trace) void {
+        const _traceRay: *const fn (this: *anyopaque, ray: *const Ray, mask: c_uint, filter: ?*ITraceFilter, trace: *Trace) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.traceRay]);
+        _traceRay(self, ray, mask, filter, trace);
+    }
+
+    pub fn pointOutsideWorld(self: *IEngineTrace, pt_test: Vector) bool {
+        const _pointOutsideWorld: *const fn (this: *anyopaque, pt_test: *const Vector) callconv(Virtual) bool = @ptrCast(self._vt[VTIndex.pointOutsideWorld]);
+        return _pointOutsideWorld(self, &pt_test);
+    }
+};
+
 pub var server: *IVEngineServer = undefined;
 pub var client: *IVEngineClient = undefined;
+
+pub var trace_server: *IEngineTrace = undefined;
+pub var trace_client: *IEngineTrace = undefined;
 
 fn init() void {
     module.loaded = false;
@@ -65,6 +81,21 @@ fn init() void {
         return;
     };
     client = @ptrCast(client_info.interface);
+
+    server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
+        std.log.err("Failed to get IVEngineServer interface", .{});
+        return;
+    });
+
+    trace_server = @ptrCast(interfaces.engineFactory("EngineTraceServer003", null) orelse {
+        std.log.err("Failed to get EngineTraceServer interface", .{});
+        return;
+    });
+
+    trace_client = @ptrCast(interfaces.engineFactory("EngineTraceClient003", null) orelse {
+        std.log.err("Failed to get EngineTraceClient interface", .{});
+        return;
+    });
 
     module.loaded = true;
 }
