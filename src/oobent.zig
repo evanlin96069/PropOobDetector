@@ -21,12 +21,14 @@ pub var feature = modules.Feature{
     .init = init,
     .deinit = deinit,
     .onTick = onTick,
+    .onPaint = onPaint,
 };
 
 var field_m_iClassname: usize = undefined;
 var field_m_Collision: usize = undefined;
 
 var font_DefaultFixedOutline: c_ulong = 0;
+var font_DefaultFixedOutline_tall: c_int = 0;
 
 const EntityInfo = struct {
     index: c_int,
@@ -162,6 +164,33 @@ fn onTick() void {
     }
 }
 
+fn onPaint() void {
+    if (!pod_hud_oob_ent.getBool()) {
+        return;
+    }
+
+    hud.imatsystem.drawSetTextFont(font_DefaultFixedOutline);
+    hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 255, .b = 255 });
+    hud.imatsystem.drawSetTextPos(0, 0);
+
+    if (engine.server.pEntityOfEntIndex(0) == null) {
+        hud.imatsystem.drawPrintText("oob entity: Server not loaded", .{});
+        return;
+    }
+
+    var offset: c_int = 0;
+    hud.imatsystem.drawPrintText("oob entity count: {d}", .{oob_ents.items.len});
+    offset += font_DefaultFixedOutline_tall + 2;
+
+    hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 200, .b = 200 });
+
+    for (oob_ents.items) |ent| {
+        hud.imatsystem.drawSetTextPos(0, offset);
+        hud.imatsystem.drawPrintText("[{d}]{s}", .{ ent.index, ent.name });
+        offset += font_DefaultFixedOutline_tall + 2;
+    }
+}
+
 fn init() void {
     feature.loaded = false;
 
@@ -174,6 +203,7 @@ fn init() void {
     }
 
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);
+    font_DefaultFixedOutline_tall = hud.imatsystem.getFontTall(font_DefaultFixedOutline);
 
     pod_print_oob_ent.register();
     pod_hud_oob_ent.register();

@@ -164,7 +164,7 @@ const IMatSystemSurface = extern struct {
     }
 
     pub fn getFontTall(self: *IMatSystemSurface, font: c_ulong) c_int {
-        const _getFontTall: *const fn (this: *anyopaque, font: c_ulong) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.getFontTall]);
+        const _getFontTall: *const fn (this: *anyopaque, font: c_ulong) callconv(Virtual) c_int = @ptrCast(self._vt[VTIndex.getFontTall]);
         return _getFontTall(self, font);
     }
 };
