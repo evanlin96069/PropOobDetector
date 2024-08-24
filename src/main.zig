@@ -12,6 +12,10 @@ pub const std_options = struct {
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
+const IServerPluginCallbacks = extern struct {
+    _vt: *align(@alignOf(*anyopaque)) const anyopaque,
+};
+
 var plugin_loaded: bool = false;
 var skip_unload: bool = false;
 
@@ -128,7 +132,7 @@ fn onQueryCvarValueFinished(_: *anyopaque, cookie: c_int, player_entity: *anyopa
     _ = cookie;
 }
 
-const vtalbe_plugin = [_]*const anyopaque{
+const vt_IServerPluginCallbacks = [_]*const anyopaque{
     &load,
     &unload,
     &pause,
@@ -149,12 +153,14 @@ const vtalbe_plugin = [_]*const anyopaque{
     &onQueryCvarValueFinished,
 };
 
-const plugin = &vtalbe_plugin;
+const plugin: IServerPluginCallbacks = .{
+    ._vt = @ptrCast(&vt_IServerPluginCallbacks),
+};
 
-export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*const anyopaque {
+export fn CreateInterface(name: [*:0]u8, ret: ?*c_int) ?*const IServerPluginCallbacks {
     if (std.mem.eql(u8, std.mem.span(name), "ISERVERPLUGINCALLBACKS002")) {
         if (ret) |r| r.* = 0;
-        return @ptrCast(&plugin);
+        return &plugin;
     }
 
     if (ret) |r| r.* = 1;
