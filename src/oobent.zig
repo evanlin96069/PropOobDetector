@@ -37,25 +37,25 @@ const EntityInfo = struct {
 
 var oob_ents: std.ArrayList(EntityInfo) = undefined;
 
-var pod_print_oob_ent = convar.ConCommand{
+var pod_print_oob_ents = convar.ConCommand{
     .base = .{
-        .name = "pod_print_oob_ent",
+        .name = "pod_print_oob_ents",
         .help_str = "Prints entities that are oob.",
     },
-    .command_callback = print_oob_ent_Fn,
+    .command_callback = print_oob_ents_Fn,
 };
 
-var pod_hud_oob_ent = convar.Variable{
+var pod_hud_oob_ents = convar.Variable{
     .cvar = .{
         .base1 = .{
-            .name = "pod_hud_oob_ent",
+            .name = "pod_hud_oob_ents",
             .help_str = "Shows entities that are oob.",
         },
         .default_value = "0",
     },
 };
 
-fn print_oob_ent_Fn(args: *const convar.CCommand) callconv(.C) void {
+fn print_oob_ents_Fn(args: *const convar.CCommand) callconv(.C) void {
     _ = args;
 
     if (engine.server.pEntityOfEntIndex(0) == null) {
@@ -103,7 +103,7 @@ const ignore_classes = [_][]const u8{
     "func_button",
 };
 
-fn detect_oob_ent(comptime CCollisionProperty: type) void {
+fn detect_oob_ents(comptime CCollisionProperty: type) void {
     for (oob_ents.items) |ent| {
         core.gpa.free(ent.name);
     }
@@ -165,22 +165,56 @@ fn detect_oob_ent(comptime CCollisionProperty: type) void {
 
 fn onTick() void {
     if (engine.sdk_version == 2013) {
-        detect_oob_ent(sdk.CCollisionPropertyV2);
+        detect_oob_ents(sdk.CCollisionPropertyV2);
     } else {
-        detect_oob_ent(sdk.CCollisionPropertyV1);
+        detect_oob_ents(sdk.CCollisionPropertyV1);
     }
 }
 
+var cl_showfps: ?*convar.ConVar = null;
+var cl_showpos: ?*convar.ConVar = null;
+
 fn onPaint() void {
-    if (!pod_hud_oob_ent.getBool()) {
+    if (!engine.client.isInGame()) {
         return;
     }
 
-    const x = 2;
+    if (!pod_hud_oob_ents.getBool()) {
+        return;
+    }
+
+    var screen_wide: c_int = 0;
+    var screen_tall: c_int = 0;
+    hud.imatsystem.getScreenSize(&screen_wide, &screen_tall);
+
+    const x = screen_wide - 300 + 2;
     var offset: c_int = 0;
 
+    if (cl_showfps == null) {
+        cl_showfps = convar.icvar.findVar("cl_showfps");
+    }
+    if (cl_showpos == null) {
+        cl_showpos = convar.icvar.findVar("cl_showpos");
+    }
+
+    if (cl_showfps) |v| {
+        if (v.getBool()) {
+            offset += 1;
+        }
+    }
+    if (cl_showpos) |v| {
+        if (v.getBool()) {
+            offset += 3;
+        }
+    }
+
     hud.imatsystem.drawSetTextFont(font_DefaultFixedOutline);
-    hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 255, .b = 255 });
+    hud.imatsystem.drawSetTextColor(.{
+        .r = 255,
+        .g = 255,
+        .b = 255,
+        .a = 255,
+    });
     hud.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
 
     if (engine.server.pEntityOfEntIndex(0) == null) {
@@ -191,7 +225,12 @@ fn onPaint() void {
     hud.imatsystem.drawPrintText("oob entity count: {d}", .{oob_ents.items.len});
     offset += 1;
 
-    hud.imatsystem.drawSetTextColor(.{ .r = 255, .g = 200, .b = 200 });
+    hud.imatsystem.drawSetTextColor(.{
+        .r = 255,
+        .g = 200,
+        .b = 200,
+        .a = 255,
+    });
 
     for (oob_ents.items) |ent| {
         hud.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
@@ -215,8 +254,8 @@ fn init() void {
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);
     font_DefaultFixedOutline_tall = hud.imatsystem.getFontTall(font_DefaultFixedOutline);
 
-    pod_print_oob_ent.register();
-    pod_hud_oob_ent.register();
+    pod_print_oob_ents.register();
+    pod_hud_oob_ents.register();
 
     oob_ents = std.ArrayList(EntityInfo).init(core.gpa);
 

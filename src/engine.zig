@@ -37,11 +37,17 @@ const IVEngineClient = extern struct {
 
     const VTIndex = struct {
         const clientCmd = 7;
+        const isInGame = 26;
     };
 
     pub fn clientCmd(self: *IVEngineClient, command: [*:0]const u8) void {
         const _clientCmd: *const fn (this: *anyopaque, command: [*:0]const u8) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.clientCmd]);
         _clientCmd(self, command);
+    }
+
+    pub fn isInGame(self: *IVEngineClient) bool {
+        const _isInGame: *const fn (this: *anyopaque) callconv(Virtual) bool = @ptrCast(self._vt[VTIndex.isInGame]);
+        return _isInGame(self);
     }
 };
 

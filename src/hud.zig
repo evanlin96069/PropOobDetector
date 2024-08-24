@@ -34,7 +34,7 @@ const IPanel = extern struct {
         origPaintTraverse(this, vgui_panel, force_repaint, allow_force);
 
         if (!found_panel_id) {
-            if (std.mem.eql(u8, std.mem.span(ipanel.getName(vgui_panel)), "HudCrosshair")) {
+            if (std.mem.eql(u8, std.mem.span(ipanel.getName(vgui_panel)), "FocusOverlayPanel")) {
                 panel_id = vgui_panel;
                 found_panel_id = true;
             }
