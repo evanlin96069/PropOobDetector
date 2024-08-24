@@ -224,5 +224,8 @@ fn init() void {
 }
 
 fn deinit() void {
+    for (oob_ents.items) |ent| {
+        core.gpa.free(ent.name);
+    }
     oob_ents.deinit();
 }
