@@ -2,7 +2,7 @@
 
 A Source Engine plugin that detects out-of-bounds props.
 
-Testedoin Portal 3420, Portal 4104, Portal 5135, and latest Portal Steampipe version.
+Tested on Portal 3420, Portal 4104, Portal 5135, and latest Portal Steampipe version.
 
 ## Command
 `pod_print_oob_ent`
