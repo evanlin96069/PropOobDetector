@@ -418,7 +418,7 @@ fn deinit() void {
     var it = Variable.head;
     while (it) |curr| : (it = curr.next) {
         if (curr.cvar.string_value) |s| {
-            tier0.memalloc.free(s);
+            tier0.allocator.free(std.mem.span(s));
         }
     }
 }

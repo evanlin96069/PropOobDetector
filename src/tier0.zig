@@ -6,6 +6,12 @@ pub fn init() !void {
     var lib = try std.DynLib.open("tier0.dll");
     defer lib.close();
 
+    const names = .{
+        .msg = "Msg",
+        .warning = "Warning",
+        .devMsg = "?DevMsg@@YAXPBDZZ",
+    };
+
     inline for (comptime std.meta.fieldNames(@TypeOf(names))) |field| {
         const func = &@field(@This(), field);
         const name = @field(names, field);
@@ -26,22 +32,16 @@ pub var devMsg: FmtFn = undefined;
 
 pub var ready: bool = false;
 
-const names = .{
-    .msg = "Msg",
-    .warning = "Warning",
-    .devMsg = "?DevMsg@@YAXPBDZZ",
-};
-
-pub var memalloc: *MemAlloc = undefined;
+var memalloc: ?*MemAlloc = null;
 
 const MemAlloc = extern struct {
     _vt: *align(@alignOf(*anyopaque)) const anyopaque,
 
     const VTable = extern struct {
         _alloc: *const anyopaque,
-        alloc: *const fn (this: *anyopaque, size: usize) callconv(Virtual) *anyopaque,
+        alloc: *const fn (this: *anyopaque, size: usize) callconv(Virtual) ?[*]u8,
         _realloc: *const anyopaque,
-        realloc: *const fn (this: *anyopaque, mem: *anyopaque, size: usize) callconv(Virtual) *anyopaque,
+        realloc: *const fn (this: *anyopaque, mem: *anyopaque, size: usize) callconv(Virtual) ?[*]u8,
         _free: *const anyopaque,
         free: *const fn (this: *anyopaque, mem: *anyopaque) callconv(Virtual) void,
     };
@@ -50,15 +50,63 @@ const MemAlloc = extern struct {
         return @ptrCast(self._vt);
     }
 
-    pub fn alloc(self: *MemAlloc, size: usize) *anyopaque {
+    pub fn alloc(self: *MemAlloc, size: usize) ?[*]u8 {
         return self.vt().alloc(self, size);
     }
 
-    pub fn realloc(self: *MemAlloc, mem: *anyopaque, size: usize) *anyopaque {
+    pub fn realloc(self: *MemAlloc, mem: *anyopaque, size: usize) ?[*]u8 {
         return self.vt().realloc(self, mem, size);
     }
 
     pub fn free(self: *MemAlloc, mem: *anyopaque) void {
         self.vt().free(self, mem);
+    }
+};
+
+var allocator_state: Tier0Allocator = .{};
+pub const allocator: std.mem.Allocator = allocator_state.allocator();
+
+const Tier0Allocator = struct {
+    pub fn allocator(self: *Tier0Allocator) std.mem.Allocator {
+        return .{
+            .ptr = self,
+            .vtable = &.{
+                .alloc = alloc,
+                .resize = resize,
+                .free = free,
+            },
+        };
+    }
+
+    fn alloc(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
+        _ = ctx;
+        _ = ptr_align;
+        _ = ret_addr;
+
+        if (memalloc) |ptr| {
+            return ptr.alloc(len);
+        }
+        return null;
+    }
+
+    fn resize(ctx: *anyopaque, buf: []u8, buf_align: u8, new_len: usize, ret_addr: usize) bool {
+        _ = ctx;
+        _ = buf_align;
+        _ = ret_addr;
+
+        if (new_len <= buf.len) {
+            return true;
+        }
+        return false;
+    }
+
+    fn free(ctx: *anyopaque, buf: []u8, buf_align: u8, ret_addr: usize) void {
+        _ = ctx;
+        _ = buf_align;
+        _ = ret_addr;
+
+        if (memalloc) |ptr| {
+            ptr.free(buf.ptr);
+        }
     }
 };

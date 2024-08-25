@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const core = @import("core.zig");
+const tier0 = @import("tier0.zig");
 
 const Module = @import("modules.zig").Module;
 
@@ -158,7 +158,7 @@ pub fn getField(comptime T: type, ptr: *anyopaque, offset: usize) *T {
 }
 
 fn addMap(datamap: *DataMap, dll_map: *std.StringHashMap(std.StringHashMap(usize))) !void {
-    var map = std.StringHashMap(usize).init(core.gpa);
+    var map = std.StringHashMap(usize).init(tier0.allocator);
     errdefer map.deinit();
 
     try addFields(datamap, 0, &map);
@@ -190,20 +190,20 @@ fn init() void {
     };
     defer client_dll.close();
 
-    var server_patterns = std.ArrayList(MatchedPattern).init(core.gpa);
+    var server_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer server_patterns.deinit();
     hook.scanAllPatterns(server_dll.mem, datamap_patterns[0..], &server_patterns) catch {
         return;
     };
 
-    var client_patterns = std.ArrayList(MatchedPattern).init(core.gpa);
+    var client_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer client_patterns.deinit();
     hook.scanAllPatterns(client_dll.mem, datamap_patterns[0..], &client_patterns) catch {
         return;
     };
 
-    server_map = std.StringHashMap(std.StringHashMap(usize)).init(core.gpa);
-    client_map = std.StringHashMap(std.StringHashMap(usize)).init(core.gpa);
+    server_map = std.StringHashMap(std.StringHashMap(usize)).init(tier0.allocator);
+    client_map = std.StringHashMap(std.StringHashMap(usize)).init(tier0.allocator);
 
     for (server_patterns.items) |pattern| {
         const info = DataMap.DataMapInfo.fromPattern(pattern);

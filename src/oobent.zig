@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
-const core = @import("core.zig");
+const tier0 = @import("tier0.zig");
 const convar = @import("convar.zig");
 const hud = @import("hud.zig");
 const engine = @import("engine.zig");
@@ -106,7 +106,7 @@ const ignore_classes = [_][]const u8{
 
 fn detect_oob_ents(comptime CCollisionProperty: type) void {
     for (oob_ents.items) |ent| {
-        core.gpa.free(ent.name);
+        tier0.allocator.free(ent.name);
     }
     oob_ents.clearAndFree();
 
@@ -152,7 +152,7 @@ fn detect_oob_ents(comptime CCollisionProperty: type) void {
             continue;
         }
 
-        const name = std.fmt.allocPrint(core.gpa, "{s}", .{class_name}) catch continue;
+        const name = std.fmt.allocPrint(tier0.allocator, "{s}", .{class_name}) catch continue;
 
         const ent_info = EntityInfo{
             .index = i,
@@ -258,14 +258,14 @@ fn init() void {
     pod_print_oob_ents.register();
     pod_hud_oob_ents.register();
 
-    oob_ents = std.ArrayList(EntityInfo).init(core.gpa);
+    oob_ents = std.ArrayList(EntityInfo).init(tier0.allocator);
 
     feature.loaded = true;
 }
 
 fn deinit() void {
     for (oob_ents.items) |ent| {
-        core.gpa.free(ent.name);
+        tier0.allocator.free(ent.name);
     }
     oob_ents.deinit();
 }
