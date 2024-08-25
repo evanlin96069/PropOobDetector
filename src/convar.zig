@@ -36,7 +36,7 @@ const ConCommandBase = extern struct {
     next: ?*ConCommandBase = null,
     registered: bool = false,
     name: [*:0]const u8,
-    help_str: [*:0]const u8 = "",
+    help_string: [*:0]const u8 = "",
     flags: FCvar = .{},
 
     const VTable = extern struct {
@@ -137,7 +137,7 @@ pub const ConVar = extern struct {
     default_value: [*:0]const u8 = "",
 
     // Dynamically allocated
-    string_value: [*:0]u8 = undefined,
+    string_value: ?[*:0]u8 = null,
     string_length: c_int = 0,
 
     float_value: f32 = 0.0,
@@ -164,7 +164,18 @@ pub const ConVar = extern struct {
         _setInt: *const anyopaque,
         clampValue: *const anyopaque,
         changeStringValue: *const anyopaque,
-        create: *const anyopaque,
+        create: *const fn (
+            this: *anyopaque,
+            name: [*:0]const u8,
+            default_value: [*:0]const u8,
+            flags: FCvar,
+            help_string: [*:0]const u8,
+            has_min: bool,
+            min_value: f32,
+            has_max: bool,
+            max_value: f32,
+            callback: ?ChangeCallbackFn,
+        ) callconv(Virtual) void,
     };
 
     fn vt1(self: *ConVar) *const VTable {
@@ -175,12 +186,35 @@ pub const ConVar = extern struct {
         return @ptrCast(self.base2._vt);
     }
 
+    fn register(self: *ConVar) void {
+        self.base1._vt = &ConVar.vtable.vtable;
+
+        self.vt1().create(
+            self,
+            self.base1.name,
+            self.default_value,
+            self.base1.flags,
+            self.base1.help_string,
+            self.has_min,
+            self.min_value,
+            self.has_max,
+            self.max_value,
+            self.change_callback,
+        );
+
+        icvar.registerConCommandBase(@ptrCast(self));
+    }
+
     pub fn getString(self: *ConVar) [:0]const u8 {
         if (self.base1.flags.never_as_string) {
             return "FCVAR_NEVER_AS_STRING";
         }
 
-        return std.mem.span(self.parent.string_value);
+        if (self.parent.string_value) |s| {
+            return std.mem.span(s);
+        }
+
+        return "";
     }
 
     pub fn getFloat(self: *ConVar) f32 {
@@ -213,30 +247,12 @@ pub const Variable = extern struct {
     next: ?*Variable = null,
 
     var head: ?*Variable = null;
-    var tail: ?*Variable = null;
 
     pub fn register(self: *Variable) void {
-        self.cvar.base1._vt = &ConVar.vtable.vtable;
+        self.cvar.register();
 
-        self.cvar.parent = &self.cvar;
-
-        const len = std.mem.len(self.cvar.default_value) + 1;
-        self.cvar.string_length = @intCast(len);
-        self.cvar.string_value = @ptrCast(tier0.memalloc.alloc(len));
-        @memcpy(self.cvar.string_value, self.cvar.default_value[0..len]);
-
-        self.cvar.float_value = std.fmt.parseFloat(f32, self.getString()) catch 0.0;
-        self.cvar.int_value = @intFromFloat(self.cvar.float_value);
-
-        icvar.registerConCommandBase(@ptrCast(&self.cvar));
-
-        if (Variable.tail) |ptr| {
-            ptr.next = self;
-            Variable.tail = self;
-        } else {
-            Variable.head = self;
-            Variable.tail = self;
-        }
+        self.next = Variable.head;
+        Variable.head = self;
     }
 
     pub fn getString(self: *Variable) [:0]const u8 {
@@ -401,6 +417,8 @@ fn deinit() void {
     icvar.unregisterConCommands();
     var it = Variable.head;
     while (it) |curr| : (it = curr.next) {
-        tier0.memalloc.free(curr.cvar.string_value);
+        if (curr.cvar.string_value) |s| {
+            tier0.memalloc.free(s);
+        }
     }
 }

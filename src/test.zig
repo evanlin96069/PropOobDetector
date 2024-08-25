@@ -16,7 +16,7 @@ var pod_datamap_print = convar.ConCommand{
         .flags = .{
             .hidden = true,
         },
-        .help_str = "Prints all datamaps.",
+        .help_string = "Prints all datamaps.",
     },
     .command_callback = datamap_print_Fn,
 };
@@ -43,7 +43,7 @@ var pod_datamap_walk = convar.ConCommand{
         .flags = .{
             .hidden = true,
         },
-        .help_str = "Walk through a datamap and print all offsets.",
+        .help_string = "Walk through a datamap and print all offsets.",
     },
     .command_callback = datamap_walk_Fn,
 };

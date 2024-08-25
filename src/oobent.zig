@@ -41,7 +41,7 @@ var oob_ents: std.ArrayList(EntityInfo) = undefined;
 var pod_print_oob_ents = convar.ConCommand{
     .base = .{
         .name = "pod_print_oob_ents",
-        .help_str = "Prints entities that are oob.",
+        .help_string = "Prints entities that are oob.",
     },
     .command_callback = print_oob_ents_Fn,
 };
@@ -50,7 +50,7 @@ var pod_hud_oob_ents = convar.Variable{
     .cvar = .{
         .base1 = .{
             .name = "pod_hud_oob_ents",
-            .help_str = "Shows entities that are oob.",
+            .help_string = "Shows entities that are oob.",
         },
         .default_value = "0",
     },
