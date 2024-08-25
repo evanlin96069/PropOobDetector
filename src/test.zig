@@ -64,7 +64,7 @@ fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
         std.log.info("Cannot find server map", .{});
     }
 
-    if (datamap.server_map.get(args.args(1))) |map| {
+    if (datamap.client_map.get(args.args(1))) |map| {
         std.log.info("Client map:", .{});
         var it = map.iterator();
         while (it.next()) |kv| {
