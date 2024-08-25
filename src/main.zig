@@ -5,9 +5,9 @@ const interfaces = @import("interfaces.zig");
 const tier0 = @import("tier0.zig");
 const core = @import("core.zig");
 
-pub const std_options = struct {
-    pub const log_level: std.log.Level = .debug;
-    pub const logFn = @import("log.zig").log;
+pub const std_options: std.Options = .{
+    .log_level = .debug,
+    .logFn = @import("log.zig").log,
 };
 
 const Virtual = std.builtin.CallingConvention.Thiscall;

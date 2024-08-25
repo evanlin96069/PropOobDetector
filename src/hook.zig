@@ -22,7 +22,7 @@ inline fn isHex(c: u8) bool {
 pub fn parsePattern(comptime str: []const u8) []const ?u8 {
     return comptime blk: {
         @setEvalBranchQuota(10_000);
-        var it = std.mem.split(u8, str, " ");
+        var it = std.mem.splitSequence(u8, str, " ");
         var pat: []const ?u8 = &.{};
 
         while (it.next()) |byte| {
@@ -95,11 +95,11 @@ pub const DynLib = struct {
     pub fn open(path: []const u8) !DynLib {
         const lib = try std.DynLib.open(path);
         var info: std.os.windows.MODULEINFO = undefined;
-        if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), lib.dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {
+        if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), lib.inner.dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {
             return error.GetModuleInformation;
         }
 
-        var ptr: [*]const u8 = @ptrCast(lib.dll);
+        var ptr: [*]const u8 = @ptrCast(lib.inner.dll);
 
         return DynLib{
             .dll = lib,

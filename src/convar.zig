@@ -1,8 +1,9 @@
 const std = @import("std");
 
 const interfaces = @import("interfaces.zig");
-const modules = @import("modules.zig");
 const tier0 = @import("tier0.zig");
+
+const Module = @import("modules.zig").Module;
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
@@ -356,7 +357,7 @@ const cvars: []const *ConCommandBase = vars: {
     break :vars vars;
 };
 
-pub var module = modules.Module{
+pub var module: Module = .{
     .init = init,
     .deinit = deinit,
 };

@@ -3,11 +3,12 @@ const std = @import("std");
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
 const core = @import("core.zig");
-const modules = @import("modules.zig");
 const convar = @import("convar.zig");
 const hud = @import("hud.zig");
 const engine = @import("engine.zig");
 const datamap = @import("datamap.zig");
+
+const Feature = @import("modules.zig").Feature;
 
 const sdk = @import("sdk.zig");
 const Edict = sdk.Edict;
@@ -16,7 +17,7 @@ const Ray = sdk.Ray;
 const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
 
-pub var feature = modules.Feature{
+pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
     .onTick = onTick,
@@ -151,7 +152,7 @@ fn detect_oob_ents(comptime CCollisionProperty: type) void {
             continue;
         }
 
-        var name = std.fmt.allocPrint(core.gpa, "{s}", .{class_name}) catch continue;
+        const name = std.fmt.allocPrint(core.gpa, "{s}", .{class_name}) catch continue;
 
         const ent_info = EntityInfo{
             .index = i,

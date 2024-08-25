@@ -1,7 +1,8 @@
 const std = @import("std");
 
-const modules = @import("modules.zig");
 const core = @import("core.zig");
+
+const Module = @import("modules.zig").Module;
 
 const hook = @import("hook.zig");
 const MatchedPattern = hook.MatchedPattern;
@@ -92,7 +93,7 @@ const DataMap = extern struct {
     };
 };
 
-pub var module = modules.Module{
+pub var module: Module = .{
     .init = init,
     .deinit = deinit,
 };

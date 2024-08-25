@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const modules = @import("modules.zig");
+const Feature = @import("modules.zig").Feature;
 const convar = @import("convar.zig");
 const engine = @import("engine.zig");
 const datamap = @import("datamap.zig");
 
-pub var feature = modules.Feature{
+pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
 };

@@ -1,7 +1,8 @@
 const std = @import("std");
 
 const interfaces = @import("interfaces.zig");
-const modules = @import("modules.zig");
+
+const Module = @import("modules.zig").Module;
 
 const sdk = @import("sdk.zig");
 const Edict = sdk.Edict;
@@ -12,7 +13,7 @@ const ITraceFilter = sdk.ITraceFilter;
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
-pub var module = modules.Module{
+pub var module: Module = .{
     .init = init,
     .deinit = deinit,
 };
