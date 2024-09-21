@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const testing = std.testing;
 
 const isHex = @import("utils.zig").isHex;
@@ -141,18 +140,12 @@ test "Load value from memory" {
 }
 
 pub fn getModule(module_name: []const u8) ?[]const u8 {
-    return switch (builtin.os.tag) {
-        .windows => blk: {
-            const path_w = std.os.windows.sliceToPrefixedFileW(null, module_name) catch break :blk null;
-            const dll = std.os.windows.kernel32.GetModuleHandleW(path_w.span()) orelse break :blk null;
-            var info: std.os.windows.MODULEINFO = undefined;
-            if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {
-                break :blk null;
-            }
-            const mem: [*]const u8 = @ptrCast(dll);
-            break :blk mem[0..info.SizeOfImage];
-        },
-        .linux => @compileError("Unsupported OS"), // TODO: Implement this
-        else => @compileError("Unsupported OS"),
-    };
+    const path_w = std.os.windows.sliceToPrefixedFileW(null, module_name) catch return null;
+    const dll = std.os.windows.kernel32.GetModuleHandleW(path_w.span()) orelse return null;
+    var info: std.os.windows.MODULEINFO = undefined;
+    if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {
+        return null;
+    }
+    const mem: [*]const u8 = @ptrCast(dll);
+    return mem[0..info.SizeOfImage];
 }

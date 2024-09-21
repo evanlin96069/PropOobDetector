@@ -1,9 +1,13 @@
 const std = @import("std");
 
-const Feature = @import("modules.zig").Feature;
+const modules = @import("modules.zig");
+const Feature = modules.Feature;
 const convar = @import("convar.zig");
 const engine = @import("engine.zig");
 const datamap = @import("datamap.zig");
+const zhook = @import("zhook/zhook.zig");
+
+const Virtual = std.builtin.CallingConvention.Thiscall;
 
 pub var feature: Feature = .{
     .init = init,
@@ -75,6 +79,17 @@ fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
+var origSetSignonState: *const fn (this: *anyopaque, state: c_int) callconv(Virtual) void = undefined;
+fn hookedSetSignonState(this: *anyopaque, state: c_int) callconv(Virtual) void {
+    origSetSignonState(this, state);
+    std.log.debug("SetSigonState: {d}", .{state});
+}
+
+const SetSignonState_patterns = zhook.mem.makePatterns(.{
+    "56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84 C0 75 ?? 8B",
+    "55 8B EC 56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84",
+});
+
 fn init() void {
     feature.loaded = false;
 
@@ -82,6 +97,17 @@ fn init() void {
     pod_datamap_walk.register();
 
     feature.loaded = true;
+
+    const engine_dll = zhook.mem.getModule("engine.dll") orelse return;
+    const SetSignonState_match = zhook.mem.scanUniquePatterns(engine_dll, SetSignonState_patterns) orelse {
+        std.log.debug("Failed to find SetSignonState", .{});
+        return;
+    };
+
+    origSetSignonState = @ptrCast(modules.hook_manager.hookDetour(SetSignonState_match.ptr, hookedSetSignonState) catch {
+        std.log.debug("Failed to hook SetSignonState", .{});
+        return;
+    });
 }
 
 fn deinit() void {}

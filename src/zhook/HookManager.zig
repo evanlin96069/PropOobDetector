@@ -32,7 +32,7 @@ pub fn hookVMT(self: *HookManager, vt: [*]*const anyopaque, index: usize, target
 }
 
 pub fn hookDetour(self: *HookManager, func: *const anyopaque, target: *const anyopaque) !*const anyopaque {
-    var hook = try Hook.hookDetour(func, target, self.alloc);
+    var hook = try Hook.hookDetour(@constCast(func), target, self.alloc);
     errdefer hook.unhook();
 
     try self.hooks.append(hook);

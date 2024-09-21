@@ -256,14 +256,14 @@ pub const Opcode = struct {
     };
 
     pub const Op1 = struct {
-        usingnamespace Op1No;
-        usingnamespace Op1I8;
-        usingnamespace Op1IW;
-        usingnamespace Op1IWI;
-        usingnamespace Op1I16;
-        usingnamespace Op1Mrm;
-        usingnamespace Op1MrmI8;
-        usingnamespace Op1MrmIW;
+        pub usingnamespace Op1No;
+        pub usingnamespace Op1I8;
+        pub usingnamespace Op1IW;
+        pub usingnamespace Op1IWI;
+        pub usingnamespace Op1I16;
+        pub usingnamespace Op1Mrm;
+        pub usingnamespace Op1MrmI8;
+        pub usingnamespace Op1MrmIW;
 
         const enter = 0xC8;
         const crazy8 = 0xF6;
@@ -486,10 +486,10 @@ pub const Opcode = struct {
     };
 
     pub const Op2 = struct {
-        usingnamespace Op2No;
-        usingnamespace Op2IW;
-        usingnamespace Op2Mrm;
-        usingnamespace Op2MrmI8;
+        pub usingnamespace Op2No;
+        pub usingnamespace Op2IW;
+        pub usingnamespace Op2Mrm;
+        pub usingnamespace Op2MrmI8;
     };
 
     pub const op2_byte = 0x0F;

@@ -1,11 +1,15 @@
 const std = @import("std");
-const builtin = @import("builtin");
 
 const x86 = @import("x86.zig");
 
 const loadValue = @import("mem.zig").loadValue;
 
 const Hook = @This();
+
+const windows = @cImport({
+    @cDefine("WIN32_LEAN_AND_MEAN", "1");
+    @cInclude("Windows.h");
+});
 
 const HookType = enum {
     vmt,
@@ -32,7 +36,8 @@ orig: ?*const anyopaque,
 data: HookData,
 
 pub fn hookVMT(vt: [*]*const anyopaque, index: usize, target: *const anyopaque) !Hook {
-    try memoryProtect(@ptrCast(vt + index), @sizeOf(*anyopaque), .ReadWrite);
+    var old_protect: std.os.windows.DWORD = undefined;
+    try std.os.windows.VirtualProtect(@ptrCast(vt + index), @sizeOf(*anyopaque), std.os.windows.PAGE_READWRITE, &old_protect);
 
     const orig: *const anyopaque = vt[index];
     vt[index] = target;
@@ -49,39 +54,54 @@ pub fn hookVMT(vt: [*]*const anyopaque, index: usize, target: *const anyopaque) 
 }
 
 pub fn hookDetour(func: *anyopaque, target: *const anyopaque, alloc: std.mem.Allocator) !Hook {
-    const mem: [*]u8 = @ptrCast(func);
+    var mem: [*]u8 = @ptrCast(func);
 
     // Hook the underlying thing if the function jmp immediately.
     while (mem[0] == x86.Opcode.Op1.jmpiw) {
-        mem += loadValue(i32, mem + 1) + 5;
+        var offset = loadValue(i32, mem + 1) + 5;
+        if (offset < 0) {
+            offset = -offset;
+            mem -= @as(u32, @bitCast(offset));
+        } else {
+            mem += @as(u32, @bitCast(offset));
+        }
     }
 
-    try memoryProtect(@ptrCast(mem), 5, .ReadWrite);
+    var old_protect: std.os.windows.DWORD = undefined;
+    try std.os.windows.VirtualProtect(mem, 5, std.os.windows.PAGE_EXECUTE_READWRITE, &old_protect);
 
     var len: usize = 0;
-    while (len < 5) {
+    while (true) {
         // CALL and JMP instructions use relative offsets rather than absolute addresses.
         // We can't copy them into the trampoline directly. Just returns an error for now.
         if (mem[len] == x86.Opcode.Op1.call) {
             return error.BadHookInstruction;
         }
 
+        len += try x86.x86_len(mem + len);
+
+        if (len >= 5) {
+            break;
+        }
+
         if (mem[len] == x86.Opcode.Op1.jmpiw) {
             return error.BadHookInstruction;
         }
-
-        len += try x86.x86_len(mem + len);
     }
 
     var trampoline = try alloc.alloc(u8, len + 5);
-    @memcpy(trampoline, mem[0..len]);
+    try std.os.windows.VirtualProtect(trampoline.ptr, trampoline.len, std.os.windows.PAGE_EXECUTE_READWRITE, &old_protect);
+
+    @memcpy(trampoline[0..len], mem);
     trampoline[len] = x86.Opcode.Op1.jmpiw;
-    const jmp1_offset: *i32 = @ptrCast(trampoline.ptr + len + 1);
-    jmp1_offset.* = @intFromPtr(func) - (@intFromPtr(trampoline.ptr) + 5);
+    const jmp1_offset: *align(1) u32 = @ptrCast(trampoline.ptr + len + 1);
+    jmp1_offset.* = @intFromPtr(mem) - (@intFromPtr(trampoline.ptr) + 5);
 
     mem[0] = x86.Opcode.Op1.jmpiw;
-    const jmp2_offset: *i32 = @ptrCast(mem + 1);
-    jmp2_offset.* = @intFromPtr(target) - (@intFromPtr(func) + 5);
+    const jmp2_offset: *align(1) u32 = @ptrCast(mem + 1);
+    jmp2_offset.* = @intFromPtr(target) - (@intFromPtr(mem) + 5);
+
+    _ = windows.FlushInstructionCache(windows.GetCurrentProcess(), mem, 5);
 
     return Hook{
         .orig = trampoline.ptr,
@@ -104,45 +124,4 @@ pub fn unhook(self: *Hook) void {
         },
     }
     self.orig = null;
-}
-
-const Protection = enum {
-    ReadOnly,
-    ReadWrite,
-    NoAccess,
-
-    fn toNative(self: Protection) u32 {
-        return switch (builtin.target.os.tag) {
-            .windows => switch (self) {
-                .ReadOnly => std.os.windows.PAGE_READONLY,
-                .ReadWrite => std.os.windows.PAGE_READWRITE,
-                .NoAccess => std.os.windows.PAGE_NOACCESS,
-            },
-            .linux => switch (self) {
-                .ReadOnly => std.os.linux.PROT.READ,
-                .ReadWrite => std.os.linux.PROT.READ | std.os.linux.PROT.WRITE,
-                .NoAccess => std.os.linux.PROT.NONE,
-            },
-            else => @compileError("Unsupported OS"),
-        };
-    }
-};
-
-fn memoryProtect(ptr: *anyopaque, len: usize, new_protect: Protection) !void {
-    const native_protect = new_protect.toNative();
-
-    switch (builtin.target.os.tag) {
-        .windows => {
-            var old_protect: std.os.windows.DWORD = undefined;
-            try std.os.windows.VirtualProtect(ptr, len, native_protect, &old_protect);
-        },
-        .linux => {
-            ptr = @ptrFromInt(@intFromPtr(ptr) & ~(4095));
-            len = len + 4095 & ~(4095);
-            if (std.os.linux.mprotect(@ptrCast(ptr), len, native_protect) != 0) {
-                return error.MemoryProtectError;
-            }
-        },
-        else => @compileError("Unsupported OS"),
-    }
 }
