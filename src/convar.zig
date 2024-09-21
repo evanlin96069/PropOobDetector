@@ -116,7 +116,7 @@ pub const ConCommand = extern struct {
     }
 };
 
-const IConVar = extern struct {
+pub const IConVar = extern struct {
     _vt: *align(@alignOf(*anyopaque)) const anyopaque = &vtable,
 
     var vtable: VTable = undefined;
