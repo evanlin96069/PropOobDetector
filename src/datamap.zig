@@ -4,8 +4,8 @@ const tier0 = @import("tier0.zig");
 
 const Module = @import("modules.zig").Module;
 
-const hook = @import("hook.zig");
-const MatchedPattern = hook.MatchedPattern;
+const zhook = @import("zhook/zhook.zig");
+const MatchedPattern = zhook.mem.MatchedPattern;
 
 pub var server_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
 pub var client_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
@@ -171,34 +171,27 @@ fn addMap(datamap: *DataMap, dll_map: *std.StringHashMap(std.StringHashMap(usize
     try dll_map.put(key, map);
 }
 
-const datamap_patterns = [_][]const ?u8{
-    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8"),
-    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C3"),
-    hook.parsePattern("C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05"),
-};
+const datamap_patterns = zhook.mem.makePatterns(.{
+    "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8",
+    "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C3",
+    "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05",
+});
 
 fn init() void {
     module.loaded = false;
 
-    var server_dll = hook.DynLib.open("server.dll") catch {
-        return;
-    };
-    defer server_dll.close();
-
-    var client_dll = hook.DynLib.open("client.dll") catch {
-        return;
-    };
-    defer client_dll.close();
+    const server_dll = zhook.mem.getModule("server.dll") orelse return;
+    const client_dll = zhook.mem.getModule("client.dll") orelse return;
 
     var server_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer server_patterns.deinit();
-    hook.scanAllPatterns(server_dll.mem, datamap_patterns[0..], &server_patterns) catch {
+    zhook.mem.scanAllPatterns(server_dll, datamap_patterns[0..], &server_patterns) catch {
         return;
     };
 
     var client_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer client_patterns.deinit();
-    hook.scanAllPatterns(client_dll.mem, datamap_patterns[0..], &client_patterns) catch {
+    zhook.mem.scanAllPatterns(client_dll, datamap_patterns[0..], &client_patterns) catch {
         return;
     };
 
@@ -208,7 +201,7 @@ fn init() void {
     for (server_patterns.items) |pattern| {
         const info = DataMap.DataMapInfo.fromPattern(pattern);
 
-        if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(server_dll.mem.ptr), server_dll.info.SizeOfImage)) {
+        if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(server_dll.ptr), server_dll.len)) {
             addMap(info.map, &server_map) catch {
                 server_map.deinit();
                 client_map.deinit();
@@ -220,7 +213,7 @@ fn init() void {
     for (client_patterns.items) |pattern| {
         const info = DataMap.DataMapInfo.fromPattern(pattern);
 
-        if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(client_dll.mem.ptr), client_dll.info.SizeOfImage)) {
+        if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(client_dll.ptr), client_dll.len)) {
             addMap(info.map, &client_map) catch {
                 server_map.deinit();
                 client_map.deinit();

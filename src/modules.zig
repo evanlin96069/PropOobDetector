@@ -1,3 +1,8 @@
+const tier0 = @import("tier0.zig");
+
+const HookManager = @import("zhook/zhook.zig").HookManager;
+pub var hook_manager: HookManager = undefined;
+
 pub const Module = struct {
     init: *const fn () void,
     deinit: *const fn () void,
@@ -41,6 +46,8 @@ const features: []const *Feature = mods: {
 };
 
 pub fn init() bool {
+    hook_manager = HookManager.init(tier0.allocator);
+
     for (modules) |module| {
         module.init();
         if (!module.loaded) {
@@ -71,6 +78,8 @@ pub fn deinit() void {
         feature.deinit();
         feature.loaded = false;
     }
+
+    hook_manager.deinit();
 }
 
 pub fn emitTick() void {

@@ -2,7 +2,6 @@ const std = @import("std");
 
 const tier0 = @import("tier0.zig");
 const interfaces = @import("interfaces.zig");
-const hook = @import("hook.zig");
 const modules = @import("modules.zig");
 
 const Module = @import("modules.zig").Module;
@@ -242,7 +241,7 @@ fn init() void {
         return;
     });
 
-    IPanel.origPaintTraverse = @ptrCast(hook.hookVirtual(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.hookedPaintTraverse) orelse {
+    IPanel.origPaintTraverse = @ptrCast(modules.hook_manager.hookVMT(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.hookedPaintTraverse) catch {
         std.log.err("Failed to hook PaintTraverse", .{});
         return;
     });
@@ -250,6 +249,4 @@ fn init() void {
     module.loaded = true;
 }
 
-fn deinit() void {
-    hook.unhookVirtual(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.origPaintTraverse);
-}
+fn deinit() void {}
