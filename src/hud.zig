@@ -21,10 +21,8 @@ const IPanel = extern struct {
         var paintTraverse: usize = undefined;
     };
 
-    var origPaintTraverse: *const fn (this: *anyopaque, vgui_panel: u32, force_repaint: bool, allow_force: bool) callconv(Virtual) void = undefined;
-
-    var panel_id: u32 = 0;
-    var found_panel_id: bool = false;
+    const PaintTraverseFunc = *const @TypeOf(hookedPaintTraverse);
+    var origPaintTraverse: PaintTraverseFunc = undefined;
 
     fn getName(self: *IPanel, panel: u32) [*:0]const u8 {
         const _setEnabled: *const fn (this: *anyopaque, panel: u32) callconv(Virtual) [*:0]const u8 = @ptrCast(self._vt[VTIndex.getName]);
@@ -32,14 +30,19 @@ const IPanel = extern struct {
     }
 
     fn hookedPaintTraverse(this: *IPanel, vgui_panel: u32, force_repaint: bool, allow_force: bool) callconv(Virtual) void {
+        const S = struct {
+            var panel_id: u32 = 0;
+            var found_panel_id: bool = false;
+        };
+
         origPaintTraverse(this, vgui_panel, force_repaint, allow_force);
 
-        if (!found_panel_id) {
+        if (!S.found_panel_id) {
             if (std.mem.eql(u8, std.mem.span(ipanel.getName(vgui_panel)), "FocusOverlayPanel")) {
-                panel_id = vgui_panel;
-                found_panel_id = true;
+                S.panel_id = vgui_panel;
+                S.found_panel_id = true;
             }
-        } else if (panel_id == vgui_panel) {
+        } else if (S.panel_id == vgui_panel) {
             modules.emitPaint();
         }
     }
@@ -241,10 +244,15 @@ fn init() void {
         return;
     });
 
-    IPanel.origPaintTraverse = @ptrCast(modules.hook_manager.hookVMT(ipanel._vt, IPanel.VTIndex.paintTraverse, IPanel.hookedPaintTraverse) catch {
+    IPanel.origPaintTraverse = modules.hook_manager.hookVMT(
+        IPanel.PaintTraverseFunc,
+        ipanel._vt,
+        IPanel.VTIndex.paintTraverse,
+        IPanel.hookedPaintTraverse,
+    ) catch {
         std.log.err("Failed to hook PaintTraverse", .{});
         return;
-    });
+    };
 
     module.loaded = true;
 }

@@ -139,8 +139,9 @@ test "Load value from memory" {
     try testing.expectEqual(0x56789AB1, loadValue(u32, mem.ptr + 1));
 }
 
-pub fn getModule(module_name: []const u8) ?[]const u8 {
-    const path_w = std.os.windows.sliceToPrefixedFileW(null, module_name) catch return null;
+pub fn getModule(comptime module_name: []const u8) ?[]const u8 {
+    const dll_name = module_name ++ ".dll";
+    const path_w = std.os.windows.sliceToPrefixedFileW(null, dll_name) catch return null;
     const dll = std.os.windows.kernel32.GetModuleHandleW(path_w.span()) orelse return null;
     var info: std.os.windows.MODULEINFO = undefined;
     if (std.os.windows.kernel32.K32GetModuleInformation(std.os.windows.kernel32.GetCurrentProcess(), dll, &info, @sizeOf(std.os.windows.MODULEINFO)) == 0) {

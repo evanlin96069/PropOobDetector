@@ -180,8 +180,8 @@ const datamap_patterns = zhook.mem.makePatterns(.{
 fn init() void {
     module.loaded = false;
 
-    const server_dll = zhook.mem.getModule("server.dll") orelse return;
-    const client_dll = zhook.mem.getModule("client.dll") orelse return;
+    const server_dll = zhook.mem.getModule("server") orelse return;
+    const client_dll = zhook.mem.getModule("client") orelse return;
 
     var server_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer server_patterns.deinit();
