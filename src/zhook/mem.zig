@@ -50,7 +50,7 @@ pub fn scanFirst(mem: []const u8, pattern: []const ?u8) ?usize {
     }
 
     var offset: usize = 0;
-    outer: while (offset < mem.len - pattern.len) : (offset += 1) {
+    outer: while (offset < mem.len - pattern.len + 1) : (offset += 1) {
         for (pattern, 0..) |byte, j| {
             if (byte) |b| {
                 if (b != mem[offset + j]) {
@@ -71,13 +71,9 @@ pub fn scanUnique(mem: []const u8, pattern: []const ?u8) ?usize {
         }
         return offset;
     }
+
     return null;
 }
-
-pub const Patterns = struct {
-    name: []const u8,
-    patterns: []const []const u8,
-};
 
 pub const MatchedPattern = struct {
     index: usize,
@@ -100,33 +96,88 @@ pub fn scanAllPatterns(mem: []const u8, patterns: []const []const ?u8, data: *st
 pub fn scanUniquePatterns(mem: []const u8, patterns: []const []const ?u8) ?MatchedPattern {
     var match: ?MatchedPattern = null;
     for (patterns, 0..) |pattern, i| {
-        if (scanUnique(mem, pattern)) |offset| {
+        if (scanFirst(mem, pattern)) |offset| {
+            if (scanFirst(mem[offset + pattern.len ..], pattern) != null) {
+                return null;
+            }
+
             if (match != null) {
                 return null;
             }
+
             match = .{
                 .index = i,
                 .ptr = mem.ptr + offset,
             };
         }
     }
+
     return match;
 }
 
+test "Scan first pattern" {
+    const mem = makeHex("F6 05 12 34 56 78 12");
+
+    // Match at the start
+    const test_pattern1 = makePattern("F6 05 12");
+    const result1 = scanFirst(mem, test_pattern1);
+    try testing.expect(result1 != null);
+    if (result1) |offset| {
+        try testing.expectEqual(0, offset);
+    }
+
+    // Match at the middle
+    const test_pattern2 = makePattern("12 34 56");
+    const result2 = scanFirst(mem, test_pattern2);
+    try testing.expect(result2 != null);
+    if (result2) |offset| {
+        try testing.expectEqual(2, offset);
+    }
+
+    // Match at the end
+    const test_pattern3 = makePattern("56 78 12");
+    const result3 = scanFirst(mem, test_pattern3);
+    try testing.expect(result3 != null);
+    if (result3) |offset| {
+        try testing.expectEqual(4, offset);
+    }
+}
+
 test "Scan unique patterns" {
-    const mem: []const u8 = &[_]u8{ 0xF6, 0x05, 0x12, 0x34, 0x56, 0x78, 0x12 };
+    const mem = makeHex("F6 05 12 34 56 78 12");
     const test_patterns = makePatterns(.{
         "00 00 ?? ?? 12",
         "12 ?? 56",
         "F6 05 00 34",
     });
 
-    const result = scanUniquePatterns(mem, test_patterns[0..]);
+    const result = scanUniquePatterns(mem, test_patterns);
     try testing.expect(result != null);
     if (result) |r| {
         try testing.expectEqual(1, r.index);
         try testing.expectEqual(mem.ptr + 2, r.ptr);
     }
+}
+
+test "Scan unique patterns with multiple matches" {
+    const mem = makeHex("12 34 56 12 34 56 78 9A BC DE");
+
+    const test_patterns1 = makePatterns(.{
+        "12 34 56", // Non-unique match
+    });
+    try testing.expect(scanUniquePatterns(mem, test_patterns1) == null);
+
+    const test_patterns2 = makePatterns(.{
+        "12 ?? ?? 12", // Unique match
+        "9A BC DE", // Unique match
+    });
+    try testing.expect(scanUniquePatterns(mem, test_patterns2) == null);
+
+    const test_patterns3 = makePatterns(.{
+        "12 34 56", // Non-unique match
+        "9A BC DE", // Unique match
+    });
+    try testing.expect(scanUniquePatterns(mem, test_patterns3) == null);
 }
 
 pub fn loadValue(T: type, ptr: [*]const u8) T {
