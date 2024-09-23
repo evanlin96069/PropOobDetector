@@ -26,7 +26,7 @@ pub fn deinit(self: *HookManager) void {
 pub fn findAndHook(self: *HookManager, T: type, comptime module_name: []const u8, patterns: []const []const ?u8, target: *const anyopaque) !T {
     const module = mem.getModule(comptime module_name) orelse return error.ModuleNotFound;
     const match = mem.scanUniquePatterns(module, patterns) orelse {
-        return error.PatterNotFound;
+        return error.PatternNotFound;
     };
 
     return self.hookDetour(T, match.ptr, target);

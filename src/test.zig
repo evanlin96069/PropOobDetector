@@ -102,7 +102,7 @@ fn init() void {
 
     origSetSignonState = modules.hook_manager.findAndHook(SetSignonStateFunc, "engine", SetSignonState_patterns, hookedSetSignonState) catch |e| {
         switch (e) {
-            error.PatterNotFound => std.log.debug("Failed to find SetSignonState", .{}),
+            error.PatternNotFound => std.log.debug("Failed to find SetSignonState", .{}),
             else => std.log.debug("Failed to hook SetSignonState", .{}),
         }
         return;
