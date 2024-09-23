@@ -21,13 +21,18 @@ pub fn getFactory(comptime module_name: []const u8) ?CreateInterfaceFn {
 }
 
 pub fn create(factory: CreateInterfaceFn, comptime name: []const u8, comptime versions: anytype) ?InterfaceInfo {
-    const version_array: [versions.len]u32 = versions;
+    comptime var version_array: [versions.len]u32 = versions;
+
+    // Sometimes the game will allow using older version, so always try the new one first.
+    comptime std.mem.sort(u32, &version_array, {}, std.sort.desc(u32));
+
     inline for (version_array) |version| {
         if (version > 999) {
             @compileError("Version too high");
         }
         const version_string = comptime std.fmt.comptimePrint("{s}{d:0>3}", .{ name, version });
         if (factory(version_string, null)) |interface| {
+            std.log.debug("Using {s}", .{version_string});
             return InterfaceInfo{
                 .version = version,
                 .interface = interface,

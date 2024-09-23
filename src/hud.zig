@@ -201,7 +201,7 @@ pub var ischeme: *IScheme = undefined;
 fn init() void {
     module.loaded = false;
 
-    const imatsystem_info = interfaces.create(interfaces.engineFactory, "MatSystemSurface", .{ 8, 6 }) orelse {
+    const imatsystem_info = interfaces.create(interfaces.engineFactory, "MatSystemSurface", .{ 6, 8 }) orelse {
         std.log.err("Failed to get IMatSystem interface", .{});
         return;
     };

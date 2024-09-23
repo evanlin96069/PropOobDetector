@@ -85,7 +85,7 @@ fn init() void {
         return;
     });
 
-    const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 14, 13 }) orelse {
+    const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 13, 14 }) orelse {
         std.log.err("Failed to get IVEngineClient interface", .{});
         return;
     };
