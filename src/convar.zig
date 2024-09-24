@@ -58,11 +58,11 @@ const ConCommandBase = extern struct {
         return ICvar.dll_identifier;
     }
 
-    fn vt(self: *ConCommandBase) *const VTable {
+    fn vt(self: *const ConCommandBase) *const VTable {
         return @ptrCast(self._vt);
     }
 
-    pub fn isCommand(self: *ConCommandBase) bool {
+    pub fn isCommand(self: *const ConCommandBase) bool {
         return self.vt().isCommand(self);
     }
 };
@@ -106,12 +106,30 @@ pub const ConCommand = extern struct {
         dispatch: *const anyopaque,
     };
 
-    fn vt(self: *ConCommand) *const VTable {
+    fn vt(self: *const ConCommand) *const VTable {
         return @ptrCast(self.base._vt);
     }
 
+    pub fn init(cmd: struct {
+        name: [*:0]const u8,
+        help_string: [*:0]const u8 = "",
+        flags: FCvar = .{},
+        command_callback: CommandCallbackFn,
+        completion_callback: ?CommandCompletionCallbackFn = null,
+    }) ConCommand {
+        return ConCommand{
+            .base = .{
+                ._vt = &ConCommand.vtable,
+                .name = cmd.name,
+                .flags = cmd.flags,
+                .help_string = cmd.help_string,
+            },
+            .command_callback = cmd.command_callback,
+            .completion_callback = cmd.completion_callback,
+        };
+    }
+
     pub fn register(self: *ConCommand) void {
-        self.base._vt = &vtable;
         icvar.registerConCommandBase(@ptrCast(self));
     }
 };
@@ -132,9 +150,11 @@ pub const IConVar = extern struct {
 
 pub const ConVar = extern struct {
     base1: ConCommandBase,
-    base2: IConVar = .{},
-    parent: *ConVar = undefined,
-    default_value: [*:0]const u8 = "",
+    base2: IConVar = .{
+        ._vt = &IConVar.vtable,
+    },
+    parent: ?*ConVar = null,
+    default_value: [*:0]const u8,
 
     // Dynamically allocated
     string_value: ?[*:0]u8 = null,
@@ -152,7 +172,7 @@ pub const ConVar = extern struct {
 
     const ChangeCallbackFn = *const fn (cvar: *IConVar, old_string: [*:0]const u8, old_value: f32) callconv(.C) void;
 
-    var vtable: extern struct {
+    var vtable_meta: extern struct {
         rtti: *const anyopaque,
         vtable: VTable,
     } = undefined;
@@ -178,17 +198,15 @@ pub const ConVar = extern struct {
         ) callconv(Virtual) void,
     };
 
-    fn vt1(self: *ConVar) *const VTable {
+    fn vt1(self: *const ConVar) *const VTable {
         return @ptrCast(self.base1._vt);
     }
 
-    fn vt2(self: *ConVar) *const IConVar.VTable {
+    fn vt2(self: *const ConVar) *const IConVar.VTable {
         return @ptrCast(self.base2._vt);
     }
 
     fn register(self: *ConVar) void {
-        self.base1._vt = &ConVar.vtable.vtable;
-
         self.vt1().create(
             self,
             self.base1.name,
@@ -205,27 +223,34 @@ pub const ConVar = extern struct {
         icvar.registerConCommandBase(@ptrCast(self));
     }
 
-    pub fn getString(self: *ConVar) [:0]const u8 {
-        if (self.base1.flags.never_as_string) {
+    fn getParent(self: *const ConVar) *const ConVar {
+        if (self.parent) |parent| {
+            return parent;
+        }
+        return self;
+    }
+
+    pub fn getString(self: *const ConVar) [:0]const u8 {
+        if (self.getParent().base1.flags.never_as_string) {
             return "FCVAR_NEVER_AS_STRING";
         }
 
-        if (self.parent.string_value) |s| {
+        if (self.getParent().string_value) |s| {
             return std.mem.span(s);
         }
 
         return "";
     }
 
-    pub fn getFloat(self: *ConVar) f32 {
-        return self.parent.float_value;
+    pub fn getFloat(self: *const ConVar) f32 {
+        return self.getParent().float_value;
     }
 
-    pub fn getInt(self: *ConVar) i32 {
-        return @intCast(self.parent.int_value);
+    pub fn getInt(self: *const ConVar) i32 {
+        return self.getParent().int_value;
     }
 
-    pub fn getBool(self: *ConVar) bool {
+    pub fn getBool(self: *const ConVar) bool {
         return self.getInt() != 0;
     }
 
@@ -246,28 +271,62 @@ pub const Variable = extern struct {
     cvar: ConVar,
     next: ?*Variable = null,
 
-    var head: ?*Variable = null;
+    var vars: ?*Variable = null;
+
+    pub fn init(cvar: struct {
+        name: [*:0]const u8,
+        default_value: [*:0]const u8,
+        flags: FCvar = .{},
+        help_string: [*:0]const u8 = "",
+        min_value: ?f32 = null,
+        max_value: ?f32 = null,
+        change_callback: ?ConVar.ChangeCallbackFn = null,
+    }) Variable {
+        return Variable{
+            .cvar = .{
+                .base1 = .{
+                    ._vt = &ConVar.vtable_meta.vtable,
+                    .name = cvar.name,
+                    .flags = cvar.flags,
+                    .help_string = cvar.help_string,
+                },
+                .default_value = cvar.default_value,
+                .has_min = cvar.min_value != null,
+                .min_value = if (cvar.min_value) |v| v else 0.0,
+                .has_max = cvar.max_value != null,
+                .max_value = if (cvar.max_value) |v| v else 0.0,
+                .change_callback = cvar.change_callback,
+            },
+        };
+    }
+
+    pub fn deinit(self: *Variable) void {
+        if (self.cvar.string_value) |s| {
+            tier0.allocator.free(std.mem.span(s));
+            self.cvar.string_value = null;
+        }
+    }
 
     pub fn register(self: *Variable) void {
         self.cvar.register();
 
-        self.next = Variable.head;
-        Variable.head = self;
+        self.next = Variable.vars;
+        Variable.vars = self;
     }
 
-    pub fn getString(self: *Variable) [:0]const u8 {
+    pub fn getString(self: *const Variable) [:0]const u8 {
         return self.cvar.getString();
     }
 
-    pub fn getFloat(self: *Variable) f32 {
+    pub fn getFloat(self: *const Variable) f32 {
         return self.cvar.getFloat();
     }
 
-    pub fn getInt(self: *Variable) i32 {
+    pub fn getInt(self: *const Variable) i32 {
         return self.cvar.getInt();
     }
 
-    pub fn getBool(self: *Variable) bool {
+    pub fn getBool(self: *const Variable) bool {
         return self.cvar.getBool();
     }
 
@@ -324,7 +383,7 @@ const ICvar = extern struct {
 
     var dll_identifier: c_int = undefined;
 
-    fn vt(self: *ICvar) *const VTable {
+    fn vt(self: *const ICvar) *const VTable {
         return @ptrCast(self._vt);
     }
 
@@ -356,23 +415,6 @@ const ICvar = extern struct {
 
 pub var icvar: *ICvar = undefined;
 
-const cvars: []const *ConCommandBase = vars: {
-    var vars: []const *ConCommandBase = &.{};
-    for (&.{
-        @import("main.zig"),
-    }) |file| {
-        for (@typeInfo(file).Struct.decls) |decl| {
-            const decl_ptr = &@field(file, decl.name);
-            const decl_type = @TypeOf(decl_ptr.*);
-            if (decl_type == ConCommand or decl_type == ConVar) {
-                const base: *ConCommandBase = @ptrCast(decl_ptr);
-                vars = vars ++ .{base};
-            }
-        }
-    }
-    break :vars vars;
-};
-
 pub var module: Module = .{
     .init = init,
     .deinit = deinit,
@@ -399,12 +441,13 @@ fn init() void {
 
     // Stealing vtables from existing command and cvar
     const cvar_vt_ptr: *const ConVar.VTable = @ptrCast(cvar.base1._vt);
-    ConVar.vtable.vtable = cvar_vt_ptr.*;
-    ConVar.vtable.vtable.base.getDLLIdentifier = ConCommandBase.getDLLIdentifier;
+    ConVar.vtable_meta.vtable = cvar_vt_ptr.*;
+    ConVar.vtable_meta.vtable.base.getDLLIdentifier = ConCommandBase.getDLLIdentifier;
+    const rtti_ptr: [*]const *const anyopaque = @ptrCast(cvar.base1._vt);
+    ConVar.vtable_meta.rtti = (rtti_ptr - 1)[0];
+
     const iconvar_vt_ptr: *const IConVar.VTable = @ptrCast(cvar.base2._vt);
     IConVar.vtable = iconvar_vt_ptr.*;
-    const rtti_ptr: [*]const *const anyopaque = @ptrCast(cvar.base1._vt);
-    ConVar.vtable.rtti = (rtti_ptr - 1)[0];
 
     const cmd_vt_ptr: *const ConCommand.VTable = @ptrCast(cmd.base._vt);
     ConCommand.vtable = cmd_vt_ptr.*;
@@ -415,10 +458,8 @@ fn init() void {
 
 fn deinit() void {
     icvar.unregisterConCommands();
-    var it = Variable.head;
+    var it = Variable.vars;
     while (it) |curr| : (it = curr.next) {
-        if (curr.cvar.string_value) |s| {
-            tier0.allocator.free(std.mem.span(s));
-        }
+        curr.deinit();
     }
 }

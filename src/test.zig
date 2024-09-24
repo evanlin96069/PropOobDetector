@@ -18,29 +18,23 @@ pub var feature: Feature = .{
     .onPaint = paint,
 };
 
-var pod_hud_debug = convar.Variable{
-    .cvar = .{
-        .base1 = .{
-            .name = "pod_hud_debug",
-            .flags = .{
-                .hidden = true,
-            },
-            .help_string = "Draw test HUD.",
-        },
-        .default_value = "0",
+var pod_hud_debug = convar.Variable.init(.{
+    .name = "pod_hud_debug",
+    .flags = .{
+        .hidden = true,
     },
-};
+    .help_string = "Draw test HUD.",
+    .default_value = "0",
+});
 
-var pod_datamap_print = convar.ConCommand{
-    .base = .{
-        .name = "pod_datamap_print",
-        .flags = .{
-            .hidden = true,
-        },
-        .help_string = "Prints all datamaps.",
+var pod_datamap_print = convar.ConCommand.init(.{
+    .name = "pod_datamap_print",
+    .flags = .{
+        .hidden = true,
     },
+    .help_string = "Prints all datamaps.",
     .command_callback = datamap_print_Fn,
-};
+});
 
 fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
     _ = args;
@@ -58,16 +52,14 @@ fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
-var pod_datamap_walk = convar.ConCommand{
-    .base = .{
-        .name = "pod_datamap_walk",
-        .flags = .{
-            .hidden = true,
-        },
-        .help_string = "Walk through a datamap and print all offsets.",
+var pod_datamap_walk = convar.ConCommand.init(.{
+    .name = "pod_datamap_walk",
+    .flags = .{
+        .hidden = true,
     },
+    .help_string = "Walk through a datamap and print all offsets.",
     .command_callback = datamap_walk_Fn,
-};
+});
 
 fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
     if (args.argc != 2) {
