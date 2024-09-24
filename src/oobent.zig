@@ -184,11 +184,9 @@ fn onPaint() void {
         return;
     }
 
-    var screen_wide: c_int = 0;
-    var screen_tall: c_int = 0;
-    hud.imatsystem.getScreenSize(&screen_wide, &screen_tall);
+    const screen = hud.imatsystem.getScreenSize();
 
-    const x = screen_wide - 300 + 2;
+    const x = screen.wide - 300 + 2;
     var offset: c_int = 0;
 
     if (cl_showfps == null) {

@@ -37,6 +37,13 @@ pub const Edict = extern struct {
     }
 };
 
+pub const Color = packed struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8 = 255,
+};
+
 pub const Vector = extern struct {
     x: f32,
     y: f32,

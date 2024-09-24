@@ -6,6 +6,8 @@ const modules = @import("modules.zig");
 
 const Module = @import("modules.zig").Module;
 
+const Color = @import("sdk.zig").Color;
+
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
 pub var module: Module = .{
@@ -66,13 +68,6 @@ const IEngineVGui = extern struct {
     }
 };
 
-const Color = packed struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8 = 255,
-};
-
 const IMatSystemSurface = extern struct {
     _vt: [*]*const anyopaque,
 
@@ -95,17 +90,17 @@ const IMatSystemSurface = extern struct {
         _drawSetColor(self, color);
     }
 
-    pub fn drawFilledRect(self: *IMatSystemSurface, x0: c_int, y0: c_int, x1: c_int, y1: c_int) void {
+    pub fn drawFilledRect(self: *IMatSystemSurface, x0: i32, y0: i32, x1: i32, y1: i32) void {
         const _drawFilledRect: *const fn (this: *anyopaque, x0: c_int, y0: c_int, x1: c_int, y1: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawFilledRect]);
         _drawFilledRect(self, x0, y0, x1, y1);
     }
 
-    pub fn drawOutlinedRect(self: *IMatSystemSurface, x0: c_int, y0: c_int, x1: c_int, y1: c_int) void {
+    pub fn drawOutlinedRect(self: *IMatSystemSurface, x0: i32, y0: i32, x1: i32, y1: i32) void {
         const _drawOutlinedRect: *const fn (this: *anyopaque, x0: c_int, y0: c_int, x1: c_int, y1: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawOutlinedRect]);
         _drawOutlinedRect(self, x0, y0, x1, y1);
     }
 
-    pub fn drawLine(self: *IMatSystemSurface, x0: c_int, y0: c_int, x1: c_int, y1: c_int) void {
+    pub fn drawLine(self: *IMatSystemSurface, x0: i32, y0: i32, x1: i32, y1: i32) void {
         const _drawLine: *const fn (this: *anyopaque, x0: c_int, y0: c_int, x1: c_int, y1: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawLine]);
         _drawLine(self, x0, y0, x1, y1);
     }
@@ -120,7 +115,7 @@ const IMatSystemSurface = extern struct {
         _drawSetTextColor(self, color);
     }
 
-    pub fn drawSetTextPos(self: *IMatSystemSurface, x: c_int, y: c_int) void {
+    pub fn drawSetTextPos(self: *IMatSystemSurface, x: i32, y: i32) void {
         const _drawSetTextPos: *const fn (this: *anyopaque, x: c_int, y: c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.drawSetTextPos]);
         _drawSetTextPos(self, x, y);
     }
@@ -149,9 +144,17 @@ const IMatSystemSurface = extern struct {
         _drawPrintText(self, utf16_buf.ptr, @intCast(utf16_buf.len), 0);
     }
 
-    pub fn getScreenSize(self: *IMatSystemSurface, wide: *c_int, tall: *c_int) void {
+    pub fn getScreenSize(self: *IMatSystemSurface) struct { wide: i32, tall: i32 } {
+        var wide: c_int = undefined;
+        var tall: c_int = undefined;
+
         const _getScreenSize: *const fn (this: *anyopaque, wide: *c_int, tall: *c_int) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.getScreenSize]);
-        return _getScreenSize(self, wide, tall);
+        _getScreenSize(self, &wide, &tall);
+
+        return .{
+            .wide = wide,
+            .tall = tall,
+        };
     }
 
     pub fn getFontTall(self: *IMatSystemSurface, font: c_ulong) c_int {

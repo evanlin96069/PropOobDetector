@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const tier0 = @import("tier0.zig");
 
 const HookManager = @import("zhook/zhook.zig").HookManager;
@@ -37,11 +38,15 @@ const modules: []const *Module = mods: {
 const features: []const *Feature = mods: {
     var mods: []const *Feature = &.{};
     for (&.{
-        @import("test.zig"),
         @import("oobent.zig"),
     }) |file| {
         mods = mods ++ .{&file.feature};
     }
+
+    if (builtin.mode == .Debug) {
+        mods = mods ++ .{&@import("test.zig").feature};
+    }
+
     break :mods mods;
 };
 
