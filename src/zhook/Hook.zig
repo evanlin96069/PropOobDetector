@@ -58,13 +58,8 @@ pub fn hookDetour(func: *anyopaque, target: *const anyopaque, alloc: std.mem.All
 
     // Hook the underlying thing if the function jmp immediately.
     while (mem[0] == x86.Opcode.Op1.jmpiw) {
-        var offset = loadValue(i32, mem + 1) + 5;
-        if (offset < 0) {
-            offset = -offset;
-            mem -= @as(u32, @bitCast(offset));
-        } else {
-            mem += @as(u32, @bitCast(offset));
-        }
+        const offset = loadValue(u32, mem + 1) +% 5;
+        mem = @ptrFromInt(@intFromPtr(mem) +% offset);
     }
 
     var old_protect: std.os.windows.DWORD = undefined;
@@ -95,11 +90,11 @@ pub fn hookDetour(func: *anyopaque, target: *const anyopaque, alloc: std.mem.All
     @memcpy(trampoline[0..len], mem);
     trampoline[len] = x86.Opcode.Op1.jmpiw;
     const jmp1_offset: *align(1) u32 = @ptrCast(trampoline.ptr + len + 1);
-    jmp1_offset.* = @intFromPtr(mem) - (@intFromPtr(trampoline.ptr) + 5);
+    jmp1_offset.* = @intFromPtr(mem) -% (@intFromPtr(trampoline.ptr) +% 5);
 
     mem[0] = x86.Opcode.Op1.jmpiw;
     const jmp2_offset: *align(1) u32 = @ptrCast(mem + 1);
-    jmp2_offset.* = @intFromPtr(target) - (@intFromPtr(mem) + 5);
+    jmp2_offset.* = @intFromPtr(target) -% (@intFromPtr(mem) +% 5);
 
     _ = windows.FlushInstructionCache(windows.GetCurrentProcess(), mem, 5);
 

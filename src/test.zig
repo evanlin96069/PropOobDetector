@@ -90,6 +90,7 @@ var origSetSignonState: SetSignonStateFunc = undefined;
 const SetSignonState_patterns = zhook.mem.makePatterns(.{
     "56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84 C0 75 ?? 8B",
     "55 8B EC 56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84",
+    "55 8B EC 56 8B F1 8B 0D ?? ?? ?? ?? 8B 01 8B 40 ?? FF D0 84 C0",
 });
 
 fn init() void {
