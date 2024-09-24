@@ -71,8 +71,9 @@ fn serverActivate(_: *anyopaque, edict_list: [*]*anyopaque, edict_count: c_int, 
 }
 
 fn gameFrame(_: *anyopaque, simulating: bool) callconv(Virtual) void {
-    _ = simulating;
-    modules.emitTick();
+    if (simulating) {
+        modules.emitTick();
+    }
 }
 
 fn levelShutdown(_: *anyopaque) callconv(Virtual) void {}
