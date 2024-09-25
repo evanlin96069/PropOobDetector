@@ -20,43 +20,43 @@ const DataMap = extern struct {
     packed_size: c_int,
 
     const FieldType = enum(c_int) {
-        FIELD_VOID = 0, // No type or value
-        FIELD_FLOAT, // Any floating point value
-        FIELD_STRING, // A string ID (return from ALLOC_STRING)
-        FIELD_VECTOR, // Any vector, QAngle, or AngularImpulse
-        FIELD_QUATERNION, // A quaternion
-        FIELD_INTEGER, // Any integer or enum
-        FIELD_BOOLEAN, // boolean, implemented as an int, I may use this as a hint for compression
-        FIELD_SHORT, // 2 byte integer
-        FIELD_CHARACTER, // a byte
-        FIELD_COLOR32, // 8-bit per channel r,g,b,a (32bit color)
-        FIELD_EMBEDDED, // an embedded object with a datadesc, recursively traverse and embedded class/structure based on an additional typedescription
-        FIELD_CUSTOM, // special type that contains function pointers to it's read/write/parse functions
+        none = 0, // No type or value
+        float, // Any floating point value
+        string, // A string ID (return from ALLOC_STRING)
+        vector, // Any vector, QAngle, or AngularImpulse
+        quaternion, // A quaternion
+        integer, // Any integer or enum
+        boolean, // boolean, implemented as an int, I may use this as a hint for compression
+        short, // 2 byte integer
+        character, // a byte
+        color32, // 8-bit per channel r,g,b,a (32bit color)
+        embedded, // an embedded object with a datadesc, recursively traverse and embedded class/structure based on an additional typedescription
+        custom, // special type that contains function pointers to it's read/write/parse functions
 
-        FIELD_CLASSPTR, // CBaseEntity *
-        FIELD_EHANDLE, // Entity handle
-        FIELD_EDICT, // edict_t *
+        classptr, // CBaseEntity *
+        ehandle, // Entity handle
+        edict, // edict_t *
 
-        FIELD_POSITION_VECTOR, // A world coordinate (these are fixed up across level transitions automagically)
-        FIELD_TIME, // a floating point time (these are fixed up automatically too!)
-        FIELD_TICK, // an integer tick count( fixed up similarly to time)
-        FIELD_MODELNAME, // Engine string that is a model name (needs precache)
-        FIELD_SOUNDNAME, // Engine string that is a sound name (needs precache)
+        position_vector, // A world coordinate (these are fixed up across level transitions automagically)
+        time, // a floating point time (these are fixed up automatically too!)
+        tick, // an integer tick count( fixed up similarly to time)
+        model_name, // Engine string that is a model name (needs precache)
+        sound_name, // Engine string that is a sound name (needs precache)
 
-        FIELD_INPUT, // a list of inputed data fields (all derived from CMultiInputVar)
-        FIELD_FUNCTION, // A class function pointer (Think, Use, etc)
+        input, // a list of inputed data fields (all derived from CMultiInputVar)
+        function, // A class function pointer (Think, Use, etc)
 
-        FIELD_VMATRIX, // a vmatrix (output coords are NOT worldspace)
+        vmatrix, // a vmatrix (output coords are NOT worldspace)
 
         // NOTE: Use float arrays for local transformations that don't need to be fixed up.
-        FIELD_VMATRIX_WORLDSPACE, // A VMatrix that maps some local space to world space (translation is fixed up on level transitions)
-        FIELD_MATRIX3X4_WORLDSPACE, // matrix3x4_t that maps some local space to world space (translation is fixed up on level transitions)
+        vmatrix_worldspace, // A VMatrix that maps some local space to world space (translation is fixed up on level transitions)
+        matrix3x4_worldspace, // matrix3x4_t that maps some local space to world space (translation is fixed up on level transitions)
 
-        FIELD_INTERVAL, // a start and range floating point interval ( e.g., 3.2->3.6 == 3.2 and 0.4 )
-        FIELD_MODELINDEX, // a model index
-        FIELD_MATERIALINDEX, // a material index (using the material precache string table)
+        interval, // a start and range floating point interval ( e.g., 3.2->3.6 == 3.2 and 0.4 )
+        model_index, // a model index
+        material_index, // a material index (using the material precache string table)
 
-        FIELD_VECTOR2D, // 2 floats
+        vector2d, // 2 floats
     };
 
     const TypeDescription = extern struct {
@@ -93,11 +93,6 @@ const DataMap = extern struct {
     };
 };
 
-pub var module: Module = .{
-    .init = init,
-    .deinit = deinit,
-};
-
 fn isAddressLegal(addr: usize, start: usize, len: usize) bool {
     return addr >= start and addr <= start + len;
 }
@@ -125,17 +120,24 @@ fn doesMapLooksValid(map: *const DataMap, start: usize, len: usize) bool {
     return false;
 }
 
-fn addFields(datamap: *DataMap, base_offset: usize, out_map: *std.StringHashMap(usize)) !void {
+fn addFields(
+    out_map: *std.StringHashMap(usize),
+    datamap: *DataMap,
+    base_offset: usize,
+    prefix: []u8,
+) !void {
     if (datamap.base_map) |base_map| {
-        try addFields(base_map, base_offset, out_map);
+        try addFields(out_map, base_map, base_offset, prefix);
     }
 
     var i: u32 = 0;
     while (i < datamap.data_num_fields) : (i += 1) {
         const desc: *DataMap.TypeDescription = &datamap.data_desc[i];
         switch (desc.field_type) {
-            // TODO support embedded field
-            .FIELD_VOID, .FIELD_FUNCTION, .FIELD_INPUT, .FIELD_EMBEDDED => {
+            .none,
+            .function,
+            .input,
+            => {
                 continue;
             },
             else => {},
@@ -147,7 +149,24 @@ fn addFields(datamap: *DataMap, base_offset: usize, out_map: *std.StringHashMap(
         }
 
         const offset: usize = @intCast(desc.field_offset[0]);
-        try out_map.put(std.mem.span(desc.field_name), base_offset + offset);
+        const name = std.mem.span(desc.field_name);
+
+        if (desc.field_type == .embedded) {
+            const field_prefix = try tier0.allocator.alloc(u8, name.len + 1);
+            defer tier0.allocator.free(field_prefix);
+
+            @memcpy(field_prefix[0..name.len], name);
+            field_prefix[name.len] = '.';
+
+            try addFields(out_map, desc.td, offset, field_prefix);
+        } else {
+            const key = try tier0.allocator.alloc(u8, prefix.len + name.len);
+
+            @memcpy(key[0..prefix.len], prefix);
+            @memcpy(key[prefix.len..], name);
+
+            try out_map.put(key, base_offset + offset);
+        }
     }
 }
 
@@ -161,7 +180,7 @@ fn addMap(datamap: *DataMap, dll_map: *std.StringHashMap(std.StringHashMap(usize
     var map = std.StringHashMap(usize).init(tier0.allocator);
     errdefer map.deinit();
 
-    try addFields(datamap, 0, &map);
+    try addFields(&map, datamap, 0, "");
 
     const key = std.mem.span(datamap.data_class_name);
     var value_ptr = dll_map.getPtr(key);
@@ -176,6 +195,11 @@ const datamap_patterns = zhook.mem.makePatterns(.{
     "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C7 05 ?? ?? ?? ?? ?? ?? ?? ?? C3",
     "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05",
 });
+
+pub var module: Module = .{
+    .init = init,
+    .deinit = deinit,
+};
 
 fn init() void {
     module.loaded = false;
@@ -228,12 +252,20 @@ fn init() void {
 fn deinit() void {
     var it = server_map.iterator();
     while (it.next()) |kv| {
+        var inner_it = kv.value_ptr.iterator();
+        while (inner_it.next()) |inner_kv| {
+            tier0.allocator.free(inner_kv.key_ptr.*);
+        }
         kv.value_ptr.deinit();
     }
     server_map.deinit();
 
     it = client_map.iterator();
     while (it.next()) |kv| {
+        var inner_it = kv.value_ptr.iterator();
+        while (inner_it.next()) |inner_kv| {
+            tier0.allocator.free(inner_kv.key_ptr.*);
+        }
         kv.value_ptr.deinit();
     }
     client_map.deinit();
