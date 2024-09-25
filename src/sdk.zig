@@ -4,20 +4,20 @@ const Virtual = std.builtin.CallingConvention.Thiscall;
 
 pub const MAX_EDICTS = 1 << 11;
 
-const FEdict = packed struct(c_uint) {
-    changed: bool = false,
-    free: bool = false,
-    full: bool = false,
-    always: bool = false,
-    dont_send: bool = false,
-    pvs_check: bool = false,
-    pending_dormant_check: bool = false,
-    dirty_pvs_information: bool = false,
-    full_edict_changed: bool = false,
-    _pad_0: u23,
-};
-
 pub const Edict = extern struct {
+    const FEdict = packed struct(c_uint) {
+        changed: bool = false,
+        free: bool = false,
+        full: bool = false,
+        always: bool = false,
+        dont_send: bool = false,
+        pvs_check: bool = false,
+        pending_dormant_check: bool = false,
+        dirty_pvs_information: bool = false,
+        full_edict_changed: bool = false,
+        _pad_0: u23,
+    };
+
     state_flags: FEdict,
     network_serial_number: c_int,
     networkable: *anyopaque,
@@ -35,6 +35,72 @@ pub const Edict = extern struct {
         }
         return null;
     }
+};
+
+pub const DataMap = extern struct {
+    data_desc: [*]TypeDescription,
+    data_num_fields: c_int,
+    data_class_name: [*:0]const u8,
+    base_map: ?*DataMap,
+    chains_validated: bool,
+    packed_offsets_computed: bool,
+    packed_size: c_int,
+
+    const FieldType = enum(c_int) {
+        none = 0, // No type or value
+        float, // Any floating point value
+        string, // A string ID (return from ALLOC_STRING)
+        vector, // Any vector, QAngle, or AngularImpulse
+        quaternion, // A quaternion
+        integer, // Any integer or enum
+        boolean, // boolean, implemented as an int, I may use this as a hint for compression
+        short, // 2 byte integer
+        character, // a byte
+        color32, // 8-bit per channel r,g,b,a (32bit color)
+        embedded, // an embedded object with a datadesc, recursively traverse and embedded class/structure based on an additional typedescription
+        custom, // special type that contains function pointers to it's read/write/parse functions
+
+        classptr, // CBaseEntity *
+        ehandle, // Entity handle
+        edict, // edict_t *
+
+        position_vector, // A world coordinate (these are fixed up across level transitions automagically)
+        time, // a floating point time (these are fixed up automatically too!)
+        tick, // an integer tick count( fixed up similarly to time)
+        model_name, // Engine string that is a model name (needs precache)
+        sound_name, // Engine string that is a sound name (needs precache)
+
+        input, // a list of inputed data fields (all derived from CMultiInputVar)
+        function, // A class function pointer (Think, Use, etc)
+
+        vmatrix, // a vmatrix (output coords are NOT worldspace)
+
+        // NOTE: Use float arrays for local transformations that don't need to be fixed up.
+        vmatrix_worldspace, // A VMatrix that maps some local space to world space (translation is fixed up on level transitions)
+        matrix3x4_worldspace, // matrix3x4_t that maps some local space to world space (translation is fixed up on level transitions)
+
+        interval, // a start and range floating point interval ( e.g., 3.2->3.6 == 3.2 and 0.4 )
+        model_index, // a model index
+        material_index, // a material index (using the material precache string table)
+
+        vector2d, // 2 floats
+    };
+
+    const TypeDescription = extern struct {
+        field_type: FieldType,
+        field_name: [*:0]const u8,
+        field_offset: [2]c_int,
+        field_size: c_ushort,
+        flags: c_short,
+        external_name: [*:0]const u8,
+        save_restore_ops: *anyopaque,
+        inputFunc: *anyopaque,
+        td: *DataMap,
+        field_size_in_bytes: c_int,
+        override_field: *TypeDescription,
+        override_count: c_int,
+        field_tolerance: f32,
+    };
 };
 
 pub const Color = packed struct {

@@ -7,90 +7,26 @@ const Module = @import("modules.zig").Module;
 const zhook = @import("zhook/zhook.zig");
 const MatchedPattern = zhook.mem.MatchedPattern;
 
+const DataMap = @import("sdk.zig").DataMap;
+
 pub var server_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
 pub var client_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
 
-const DataMap = extern struct {
-    data_desc: [*]TypeDescription,
-    data_num_fields: c_int,
-    data_class_name: [*:0]const u8,
-    base_map: ?*DataMap,
-    chains_validated: bool,
-    packed_offsets_computed: bool,
-    packed_size: c_int,
+const DataMapInfo = struct {
+    num_fields: c_int,
+    map: *DataMap,
 
-    const FieldType = enum(c_int) {
-        none = 0, // No type or value
-        float, // Any floating point value
-        string, // A string ID (return from ALLOC_STRING)
-        vector, // Any vector, QAngle, or AngularImpulse
-        quaternion, // A quaternion
-        integer, // Any integer or enum
-        boolean, // boolean, implemented as an int, I may use this as a hint for compression
-        short, // 2 byte integer
-        character, // a byte
-        color32, // 8-bit per channel r,g,b,a (32bit color)
-        embedded, // an embedded object with a datadesc, recursively traverse and embedded class/structure based on an additional typedescription
-        custom, // special type that contains function pointers to it's read/write/parse functions
+    fn fromPattern(pattern: MatchedPattern) DataMapInfo {
+        const num_field_offset: usize = 6;
+        const map_offset: usize = if (pattern.index == 2) 17 else 12;
 
-        classptr, // CBaseEntity *
-        ehandle, // Entity handle
-        edict, // edict_t *
-
-        position_vector, // A world coordinate (these are fixed up across level transitions automagically)
-        time, // a floating point time (these are fixed up automatically too!)
-        tick, // an integer tick count( fixed up similarly to time)
-        model_name, // Engine string that is a model name (needs precache)
-        sound_name, // Engine string that is a sound name (needs precache)
-
-        input, // a list of inputed data fields (all derived from CMultiInputVar)
-        function, // A class function pointer (Think, Use, etc)
-
-        vmatrix, // a vmatrix (output coords are NOT worldspace)
-
-        // NOTE: Use float arrays for local transformations that don't need to be fixed up.
-        vmatrix_worldspace, // A VMatrix that maps some local space to world space (translation is fixed up on level transitions)
-        matrix3x4_worldspace, // matrix3x4_t that maps some local space to world space (translation is fixed up on level transitions)
-
-        interval, // a start and range floating point interval ( e.g., 3.2->3.6 == 3.2 and 0.4 )
-        model_index, // a model index
-        material_index, // a material index (using the material precache string table)
-
-        vector2d, // 2 floats
-    };
-
-    const TypeDescription = extern struct {
-        field_type: FieldType,
-        field_name: [*:0]const u8,
-        field_offset: [2]c_int,
-        field_size: c_ushort,
-        flags: c_short,
-        external_name: [*:0]const u8,
-        save_restore_ops: *anyopaque,
-        inputFunc: *anyopaque,
-        td: *DataMap,
-        field_size_in_bytes: c_int,
-        override_field: *TypeDescription,
-        override_count: c_int,
-        field_tolerance: f32,
-    };
-
-    const DataMapInfo = struct {
-        num_fields: c_int,
-        map: *DataMap,
-
-        fn fromPattern(pattern: MatchedPattern) DataMapInfo {
-            const num_field_offset: usize = 6;
-            const map_offset: usize = if (pattern.index == 2) 17 else 12;
-
-            const num_fields: *align(1) const c_int = @ptrCast(pattern.ptr + num_field_offset);
-            const map: *align(1) const *DataMap = @ptrCast(pattern.ptr + map_offset);
-            return DataMapInfo{
-                .num_fields = num_fields.*,
-                .map = map.*,
-            };
-        }
-    };
+        const num_fields: *align(1) const c_int = @ptrCast(pattern.ptr + num_field_offset);
+        const map: *align(1) const *DataMap = @ptrCast(pattern.ptr + map_offset);
+        return DataMapInfo{
+            .num_fields = num_fields.*,
+            .map = map.*,
+        };
+    }
 };
 
 fn isAddressLegal(addr: usize, start: usize, len: usize) bool {
@@ -132,7 +68,7 @@ fn addFields(
 
     var i: u32 = 0;
     while (i < datamap.data_num_fields) : (i += 1) {
-        const desc: *DataMap.TypeDescription = &datamap.data_desc[i];
+        const desc = &datamap.data_desc[i];
         switch (desc.field_type) {
             .none,
             .function,
@@ -223,7 +159,7 @@ fn init() void {
     client_map = std.StringHashMap(std.StringHashMap(usize)).init(tier0.allocator);
 
     for (server_patterns.items) |pattern| {
-        const info = DataMap.DataMapInfo.fromPattern(pattern);
+        const info = DataMapInfo.fromPattern(pattern);
 
         if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(server_dll.ptr), server_dll.len)) {
             addMap(info.map, &server_map) catch {
@@ -235,7 +171,7 @@ fn init() void {
     }
 
     for (client_patterns.items) |pattern| {
-        const info = DataMap.DataMapInfo.fromPattern(pattern);
+        const info = DataMapInfo.fromPattern(pattern);
 
         if (info.num_fields > 0 and doesMapLooksValid(info.map, @intFromPtr(client_dll.ptr), client_dll.len)) {
             addMap(info.map, &client_map) catch {
