@@ -117,6 +117,7 @@ pub fn unhook(self: *Hook) void {
         .detour => |v| {
             @memcpy(v.func, v.trampoline[0 .. v.trampoline.len - 5]);
             _ = windows.FlushInstructionCache(windows.GetCurrentProcess(), v.func, 5);
+            v.alloc.free(v.trampoline);
         },
     }
     self.orig = null;
