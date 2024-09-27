@@ -4,12 +4,16 @@ const interfaces = @import("../interfaces.zig");
 
 const Module = @import("Module.zig");
 
+const core = @import("../core.zig");
+
 const sdk = @import("sdk");
 const Edict = sdk.Edict;
 const Vector = sdk.Vector;
 const Ray = sdk.Ray;
 const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
+
+const zhook = @import("zhook");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
@@ -77,6 +81,34 @@ pub var client: *IVEngineClient = undefined;
 pub var trace_server: *IEngineTrace = undefined;
 pub var trace_client: *IEngineTrace = undefined;
 
+pub const SignonState = enum(c_int) {
+    none = 0,
+    challenge,
+    connected,
+    new,
+    prespawn,
+    spawn,
+    full,
+    changelevel,
+};
+
+fn hookedSetSignonState(this: *anyopaque, state: SignonState) callconv(Virtual) void {
+    origSetSignonState.?(this, state);
+
+    if (state == .full) {
+        core.emitSessionStart();
+    }
+}
+
+const SetSignonStateFunc = *const @TypeOf(hookedSetSignonState);
+var origSetSignonState: ?SetSignonStateFunc = null;
+
+const SetSignonState_patterns = zhook.mem.makePatterns(.{
+    "56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84 C0 75 ?? 8B",
+    "55 8B EC 56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84",
+    "55 8B EC 56 8B F1 8B 0D ?? ?? ?? ?? 8B 01 8B 40 ?? FF D0 84 C0",
+});
+
 fn init() void {
     module.loaded = false;
 
@@ -106,6 +138,19 @@ fn init() void {
         std.log.err("Failed to get EngineTraceClient interface", .{});
         return;
     });
+
+    origSetSignonState = core.hook_manager.findAndHook(
+        SetSignonStateFunc,
+        "engine",
+        SetSignonState_patterns,
+        hookedSetSignonState,
+    ) catch |e| blk: {
+        switch (e) {
+            error.PatternNotFound => std.log.debug("Failed to find SetSignonState", .{}),
+            else => std.log.debug("Failed to hook SetSignonState", .{}),
+        }
+        break :blk null;
+    };
 
     module.loaded = true;
 }

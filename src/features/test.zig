@@ -1,15 +1,11 @@
 const std = @import("std");
 
-const core = @import("../core.zig");
-
 const modules = @import("../modules.zig");
 const convar = modules.tier1;
 const hud = modules.vgui;
 const engine = modules.engine;
 
 const datamap = @import("datamap.zig");
-
-const zhook = @import("zhook");
 
 const Color = @import("sdk").Color;
 
@@ -21,6 +17,7 @@ pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
     .onPaint = paint,
+    .onSessionStart = onSessionStart,
 };
 
 var pod_hud_debug = convar.Variable.init(.{
@@ -122,19 +119,9 @@ fn paint() void {
     }
 }
 
-fn hookedSetSignonState(this: *anyopaque, state: c_int) callconv(Virtual) void {
-    origSetSignonState(this, state);
-    std.log.debug("SetSigonState: {d}", .{state});
+fn onSessionStart() void {
+    std.log.debug("Session Start!", .{});
 }
-
-const SetSignonStateFunc = *const @TypeOf(hookedSetSignonState);
-var origSetSignonState: SetSignonStateFunc = undefined;
-
-const SetSignonState_patterns = zhook.mem.makePatterns(.{
-    "56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84 C0 75 ?? 8B",
-    "55 8B EC 56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84",
-    "55 8B EC 56 8B F1 8B 0D ?? ?? ?? ?? 8B 01 8B 40 ?? FF D0 84 C0",
-});
 
 fn init() void {
     feature.loaded = false;
@@ -145,14 +132,6 @@ fn init() void {
     pod_hud_debug.register();
 
     feature.loaded = true;
-
-    origSetSignonState = core.hook_manager.findAndHook(SetSignonStateFunc, "engine", SetSignonState_patterns, hookedSetSignonState) catch |e| {
-        switch (e) {
-            error.PatternNotFound => std.log.debug("Failed to find SetSignonState", .{}),
-            else => std.log.debug("Failed to hook SetSignonState", .{}),
-        }
-        return;
-    };
 }
 
 fn deinit() void {}

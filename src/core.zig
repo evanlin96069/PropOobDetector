@@ -95,3 +95,14 @@ pub fn emitPaint() void {
         }
     }
 }
+
+pub fn emitSessionStart() void {
+    for (features) |feature| {
+        if (!feature.loaded) {
+            continue;
+        }
+        if (feature.onSessionStart) |onSessionStart| {
+            onSessionStart();
+        }
+    }
+}
