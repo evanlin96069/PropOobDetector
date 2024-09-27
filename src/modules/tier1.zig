@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const interfaces = @import("interfaces.zig");
+const interfaces = @import("../interfaces.zig");
 const tier0 = @import("tier0.zig");
 
-const Module = @import("modules.zig").Module;
+const Module = @import("Module.zig");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 

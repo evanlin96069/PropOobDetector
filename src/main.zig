@@ -1,8 +1,8 @@
 const std = @import("std");
 
-const modules = @import("modules.zig");
+const core = @import("core.zig");
 const interfaces = @import("interfaces.zig");
-const tier0 = @import("tier0.zig");
+const tier0 = @import("modules.zig").tier0;
 
 pub const std_options: std.Options = .{
     .log_level = .debug,
@@ -29,11 +29,7 @@ fn load(_: *anyopaque, interfaceFactory: interfaces.CreateInterfaceFn, gameServe
     interfaces.engineFactory = interfaceFactory;
     interfaces.serverFactory = gameServerFactory;
 
-    tier0.init() catch {
-        return false;
-    };
-
-    if (!modules.init()) {
+    if (!core.init()) {
         return false;
     }
 
@@ -46,8 +42,7 @@ fn unload(_: *anyopaque) callconv(Virtual) void {
         return;
     }
 
-    modules.deinit();
-    tier0.ready = false;
+    core.deinit();
 
     plugin_loaded = false;
 }
@@ -72,7 +67,7 @@ fn serverActivate(_: *anyopaque, edict_list: [*]*anyopaque, edict_count: c_int, 
 
 fn gameFrame(_: *anyopaque, simulating: bool) callconv(Virtual) void {
     if (simulating) {
-        modules.emitTick();
+        core.emitTick();
     }
 }
 

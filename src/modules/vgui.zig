@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const tier0 = @import("tier0.zig");
-const interfaces = @import("interfaces.zig");
-const modules = @import("modules.zig");
+const interfaces = @import("../interfaces.zig");
+const core = @import("../core.zig");
 
-const Module = @import("modules.zig").Module;
+const Module = @import("Module.zig");
 
-const Color = @import("sdk.zig").Color;
+const Color = @import("sdk").Color;
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
@@ -45,7 +45,7 @@ const IPanel = extern struct {
                 S.found_panel_id = true;
             }
         } else if (S.panel_id == vgui_panel) {
-            modules.emitPaint();
+            core.emitPaint();
         }
     }
 };
@@ -247,7 +247,7 @@ fn init() void {
         return;
     });
 
-    IPanel.origPaintTraverse = modules.hook_manager.hookVMT(
+    IPanel.origPaintTraverse = core.hook_manager.hookVMT(
         IPanel.PaintTraverseFunc,
         ipanel._vt,
         IPanel.VTIndex.paintTraverse,

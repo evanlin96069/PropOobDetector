@@ -1,10 +1,10 @@
 const std = @import("std");
 
-const interfaces = @import("interfaces.zig");
+const interfaces = @import("../interfaces.zig");
 
-const Module = @import("modules.zig").Module;
+const Module = @import("Module.zig");
 
-const sdk = @import("sdk.zig");
+const sdk = @import("sdk");
 const Edict = sdk.Edict;
 const Vector = sdk.Vector;
 const Ray = sdk.Ray;

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const tier0 = @import("tier0.zig");
+const tier0 = @import("modules.zig").tier0;
 
 const Context = struct {
     fmtFn: tier0.FmtFn,
@@ -26,7 +26,7 @@ pub fn log(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    if (!tier0.ready) return;
+    if (!tier0.module.loaded) return;
 
     const scope_prefix = if (scope == .default) "" else ("[" ++ @tagName(scope) ++ "] ");
     const context: Context = switch (level) {

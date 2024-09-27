@@ -1,13 +1,13 @@
 const std = @import("std");
 
-const tier0 = @import("tier0.zig");
+const tier0 = @import("../modules.zig").tier0;
 
-const Module = @import("modules.zig").Module;
+const Feature = @import("Feature.zig");
 
 const zhook = @import("zhook");
 const MatchedPattern = zhook.mem.MatchedPattern;
 
-const DataMap = @import("sdk.zig").DataMap;
+const DataMap = @import("sdk").DataMap;
 
 pub var server_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
 pub var client_map: std.StringHashMap(std.StringHashMap(usize)) = undefined;
@@ -132,13 +132,13 @@ const datamap_patterns = zhook.mem.makePatterns(.{
     "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05",
 });
 
-pub var module: Module = .{
+pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
 };
 
 fn init() void {
-    module.loaded = false;
+    feature.loaded = false;
 
     const server_dll = zhook.mem.getModule("server") orelse return;
     const client_dll = zhook.mem.getModule("client") orelse return;
@@ -182,7 +182,7 @@ fn init() void {
         }
     }
 
-    module.loaded = true;
+    feature.loaded = true;
 }
 
 fn deinit() void {

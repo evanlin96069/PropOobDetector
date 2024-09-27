@@ -1,14 +1,19 @@
 const std = @import("std");
 
-const modules = @import("modules.zig");
-const Feature = modules.Feature;
-const convar = @import("convar.zig");
-const hud = @import("hud.zig");
-const engine = @import("engine.zig");
+const core = @import("../core.zig");
+
+const modules = @import("../modules.zig");
+const convar = modules.tier1;
+const hud = modules.vgui;
+const engine = modules.engine;
+
 const datamap = @import("datamap.zig");
+
 const zhook = @import("zhook");
 
-const Color = @import("sdk.zig").Color;
+const Color = @import("sdk").Color;
+
+const Feature = @import("Feature.zig");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
@@ -141,7 +146,7 @@ fn init() void {
 
     feature.loaded = true;
 
-    origSetSignonState = modules.hook_manager.findAndHook(SetSignonStateFunc, "engine", SetSignonState_patterns, hookedSetSignonState) catch |e| {
+    origSetSignonState = core.hook_manager.findAndHook(SetSignonStateFunc, "engine", SetSignonState_patterns, hookedSetSignonState) catch |e| {
         switch (e) {
             error.PatternNotFound => std.log.debug("Failed to find SetSignonState", .{}),
             else => std.log.debug("Failed to hook SetSignonState", .{}),

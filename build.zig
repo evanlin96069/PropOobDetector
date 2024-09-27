@@ -21,5 +21,10 @@ pub fn build(b: *std.Build) void {
     });
     lib.root_module.addImport("zhook", zhook);
 
+    const sdk = b.addModule("sdk", .{
+        .root_source_file = b.path("libs/sdk/sdk.zig"),
+    });
+    lib.root_module.addImport("sdk", sdk);
+
     b.installArtifact(lib);
 }

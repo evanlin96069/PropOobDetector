@@ -2,15 +2,17 @@ const std = @import("std");
 
 const Virtual = std.builtin.CallingConvention.Thiscall;
 
-const tier0 = @import("tier0.zig");
-const convar = @import("convar.zig");
-const hud = @import("hud.zig");
-const engine = @import("engine.zig");
+const modules = @import("../modules.zig");
+const tier0 = modules.tier0;
+const convar = modules.tier1;
+const hud = modules.vgui;
+const engine = modules.engine;
+
 const datamap = @import("datamap.zig");
 
-const Feature = @import("modules.zig").Feature;
+const Feature = @import("Feature.zig");
 
-const sdk = @import("sdk.zig");
+const sdk = @import("sdk");
 const Edict = sdk.Edict;
 const Vector = sdk.Vector;
 const Ray = sdk.Ray;
