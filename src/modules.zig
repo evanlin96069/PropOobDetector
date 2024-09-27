@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const tier0 = @import("tier0.zig");
 
-const HookManager = @import("zhook/zhook.zig").HookManager;
+const HookManager = @import("zhook").HookManager;
 pub var hook_manager: HookManager = undefined;
 
 pub const Module = struct {

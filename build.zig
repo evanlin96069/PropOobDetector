@@ -15,5 +15,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     lib.linkLibC();
+
+    const zhook = b.addModule("zhook", .{
+        .root_source_file = b.path("libs/zhook/zhook.zig"),
+    });
+    lib.root_module.addImport("zhook", zhook);
+
     b.installArtifact(lib);
 }

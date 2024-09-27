@@ -4,7 +4,7 @@ const tier0 = @import("tier0.zig");
 
 const Module = @import("modules.zig").Module;
 
-const zhook = @import("zhook/zhook.zig");
+const zhook = @import("zhook");
 const MatchedPattern = zhook.mem.MatchedPattern;
 
 const DataMap = @import("sdk.zig").DataMap;

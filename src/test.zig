@@ -6,7 +6,7 @@ const convar = @import("convar.zig");
 const hud = @import("hud.zig");
 const engine = @import("engine.zig");
 const datamap = @import("datamap.zig");
-const zhook = @import("zhook/zhook.zig");
+const zhook = @import("zhook");
 
 const Color = @import("sdk.zig").Color;
 
