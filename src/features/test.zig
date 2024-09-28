@@ -11,8 +11,6 @@ const Color = @import("sdk").Color;
 
 const Feature = @import("Feature.zig");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,

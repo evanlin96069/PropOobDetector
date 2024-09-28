@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 pub const MAX_EDICTS = 1 << 11;
 
 pub const Edict = extern struct {
@@ -234,8 +232,8 @@ pub const ITraceFilter = extern struct {
     _vt: *align(@alignOf(*anyopaque)) const anyopaque = undefined,
 
     pub const VTable = extern struct {
-        shouldHitEntity: *const fn (_: *anyopaque, server_entity: *anyopaque, contents_mask: c_int) callconv(Virtual) bool,
-        getTraceType: *const fn (_: *anyopaque) callconv(Virtual) c_int,
+        shouldHitEntity: *const fn (_: *anyopaque, server_entity: *anyopaque, contents_mask: c_int) callconv(.Thiscall) bool,
+        getTraceType: *const fn (_: *anyopaque) callconv(.Thiscall) c_int,
     };
 };
 
@@ -269,17 +267,17 @@ pub const CCollisionPropertyV1 = extern struct {
     };
 
     fn getCollisionOrigin(self: *CCollisionPropertyV1) Vector {
-        const _getCollisionOrigin: *const fn (this: *anyopaque) callconv(Virtual) *Vector = @ptrCast(self._vt[VTIndex.getCollisionOrigin]);
+        const _getCollisionOrigin: *const fn (this: *anyopaque) callconv(.Thiscall) *Vector = @ptrCast(self._vt[VTIndex.getCollisionOrigin]);
         return _getCollisionOrigin(self).*;
     }
 
     fn getCollisionAngles(self: *CCollisionPropertyV1) QAngle {
-        const _getCollisionAngles: *const fn (this: *anyopaque) callconv(Virtual) *QAngle = @ptrCast(self._vt[VTIndex.getCollisionAngles]);
+        const _getCollisionAngles: *const fn (this: *anyopaque) callconv(.Thiscall) *QAngle = @ptrCast(self._vt[VTIndex.getCollisionAngles]);
         return _getCollisionAngles(self).*;
     }
 
     fn collisionToWorldTransform(self: *CCollisionPropertyV1) Matrix3x4 {
-        const _collisionToWorldTransform: *const fn (this: *anyopaque) callconv(Virtual) *const Matrix3x4 = @ptrCast(self._vt[VTIndex.collisionToWorldTransform]);
+        const _collisionToWorldTransform: *const fn (this: *anyopaque) callconv(.Thiscall) *const Matrix3x4 = @ptrCast(self._vt[VTIndex.collisionToWorldTransform]);
         return _collisionToWorldTransform(self).*;
     }
 
@@ -340,17 +338,17 @@ pub const CCollisionPropertyV2 = extern struct {
     };
 
     fn getCollisionOrigin(self: *CCollisionPropertyV2) Vector {
-        const _getCollisionOrigin: *const fn (this: *anyopaque) callconv(Virtual) *Vector = @ptrCast(self._vt[VTIndex.getCollisionOrigin]);
+        const _getCollisionOrigin: *const fn (this: *anyopaque) callconv(.Thiscall) *Vector = @ptrCast(self._vt[VTIndex.getCollisionOrigin]);
         return _getCollisionOrigin(self).*;
     }
 
     fn getCollisionAngles(self: *CCollisionPropertyV2) QAngle {
-        const _getCollisionAngles: *const fn (this: *anyopaque) callconv(Virtual) *QAngle = @ptrCast(self._vt[VTIndex.getCollisionAngles]);
+        const _getCollisionAngles: *const fn (this: *anyopaque) callconv(.Thiscall) *QAngle = @ptrCast(self._vt[VTIndex.getCollisionAngles]);
         return _getCollisionAngles(self).*;
     }
 
     fn collisionToWorldTransform(self: *CCollisionPropertyV2) Matrix3x4 {
-        const _collisionToWorldTransform: *const fn (this: *anyopaque) callconv(Virtual) *const Matrix3x4 = @ptrCast(self._vt[VTIndex.collisionToWorldTransform]);
+        const _collisionToWorldTransform: *const fn (this: *anyopaque) callconv(.Thiscall) *const Matrix3x4 = @ptrCast(self._vt[VTIndex.collisionToWorldTransform]);
         return _collisionToWorldTransform(self).*;
     }
 

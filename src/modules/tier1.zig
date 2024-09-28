@@ -5,8 +5,6 @@ const tier0 = @import("tier0.zig");
 
 const Module = @import("Module.zig");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 pub const FCvar = packed struct(c_uint) {
     unregistered: bool = false,
     development_only: bool = false,
@@ -41,19 +39,19 @@ const ConCommandBase = extern struct {
 
     const VTable = extern struct {
         destruct: *const anyopaque,
-        isCommand: *const fn (this: *anyopaque) callconv(Virtual) bool,
+        isCommand: *const fn (this: *anyopaque) callconv(.Thiscall) bool,
         isFlagSet: *const anyopaque,
         addFlags: *const anyopaque,
         getName: *const anyopaque,
         getHelpText: *const anyopaque,
         isRegistered: *const anyopaque,
-        getDLLIdentifier: *const fn (this: *anyopaque) callconv(Virtual) c_int,
+        getDLLIdentifier: *const fn (this: *anyopaque) callconv(.Thiscall) c_int,
 
         create: *const anyopaque,
         init: *const anyopaque,
     };
 
-    fn getDLLIdentifier(this: *anyopaque) callconv(Virtual) c_int {
+    fn getDLLIdentifier(this: *anyopaque) callconv(.Thiscall) c_int {
         _ = this;
         return ICvar.dll_identifier;
     }
@@ -140,9 +138,9 @@ pub const IConVar = extern struct {
     var vtable: VTable = undefined;
 
     const VTable = extern struct {
-        setInt: *const fn (this: *anyopaque, value: c_int) callconv(Virtual) void,
-        setFloat: *const fn (this: *anyopaque, value: f32) callconv(Virtual) void,
-        setString: *const fn (this: *anyopaque, value: [*:0]const u8) callconv(Virtual) void,
+        setInt: *const fn (this: *anyopaque, value: c_int) callconv(.Thiscall) void,
+        setFloat: *const fn (this: *anyopaque, value: f32) callconv(.Thiscall) void,
+        setString: *const fn (this: *anyopaque, value: [*:0]const u8) callconv(.Thiscall) void,
         getName: *const anyopaque,
         isFlagSet: *const anyopaque,
     };
@@ -195,7 +193,7 @@ pub const ConVar = extern struct {
             has_max: bool,
             max_value: f32,
             callback: ?ChangeCallbackFn,
-        ) callconv(Virtual) void,
+        ) callconv(.Thiscall) void,
     };
 
     fn vt1(self: *const ConVar) *const VTable {
@@ -349,23 +347,23 @@ const ICvar = extern struct {
     const VTable = extern struct {
         base: interfaces.IAppSystem.VTable,
 
-        allocateDLLIDentifier: *const fn (this: *anyopaque) callconv(Virtual) c_int,
+        allocateDLLIDentifier: *const fn (this: *anyopaque) callconv(.Thiscall) c_int,
 
-        registerConCommandBase: *const fn (this: *anyopaque, cmd: *ConCommandBase) callconv(Virtual) void,
+        registerConCommandBase: *const fn (this: *anyopaque, cmd: *ConCommandBase) callconv(.Thiscall) void,
         unregisterConCommand: *const anyopaque,
-        unregisterConCommands: *const fn (this: *anyopaque, id: c_int) callconv(Virtual) void,
+        unregisterConCommands: *const fn (this: *anyopaque, id: c_int) callconv(.Thiscall) void,
 
         getCommandLineValue: *const anyopaque,
 
         findCommandBaseConst: *const anyopaque,
-        findCommandBase: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(Virtual) ?*ConCommandBase,
+        findCommandBase: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(.Thiscall) ?*ConCommandBase,
         findVarConst: *const anyopaque,
-        findVar: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(Virtual) ?*ConVar,
+        findVar: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(.Thiscall) ?*ConVar,
         findCommandConst: *const anyopaque,
-        findCommand: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(Virtual) ?*ConCommand,
+        findCommand: *const fn (this: *anyopaque, name: [*:0]const u8) callconv(.Thiscall) ?*ConCommand,
 
         getCommandsConst: *const anyopaque,
-        getCommands: *const fn (this: *anyopaque) callconv(Virtual) *ConCommandBase,
+        getCommands: *const fn (this: *anyopaque) callconv(.Thiscall) *ConCommandBase,
 
         installGlobalChangeCallback: *const anyopaque,
         removeGlobalChangeCallback: *const anyopaque,

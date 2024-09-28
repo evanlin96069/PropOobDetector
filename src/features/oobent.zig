@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 const modules = @import("../modules.zig");
 const tier0 = modules.tier0;
 const convar = modules.tier1;
@@ -67,13 +65,13 @@ var pod_hud_oob_ents = convar.Variable.init(.{
     .default_value = "0",
 });
 
-fn shouldHitEntity(_: *anyopaque, server_entity: *anyopaque, contents_mask: c_int) callconv(Virtual) bool {
+fn shouldHitEntity(_: *anyopaque, server_entity: *anyopaque, contents_mask: c_int) callconv(.Thiscall) bool {
     _ = server_entity;
     _ = contents_mask;
     return false;
 }
 
-fn getTraceType(_: *anyopaque) callconv(Virtual) c_int {
+fn getTraceType(_: *anyopaque) callconv(.Thiscall) c_int {
     const trace_world_only = 1;
     return trace_world_only;
 }

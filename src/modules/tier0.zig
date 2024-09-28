@@ -2,8 +2,6 @@ const std = @import("std");
 
 const Module = @import("Module.zig");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 pub var module: Module = .{
     .init = init,
     .deinit = deinit,
@@ -46,11 +44,11 @@ const MemAlloc = extern struct {
 
     const VTable = extern struct {
         _alloc: *const anyopaque,
-        alloc: *const fn (this: *anyopaque, size: usize) callconv(Virtual) ?[*]u8,
+        alloc: *const fn (this: *anyopaque, size: usize) callconv(.Thiscall) ?[*]u8,
         _realloc: *const anyopaque,
-        realloc: *const fn (this: *anyopaque, mem: *anyopaque, size: usize) callconv(Virtual) ?[*]u8,
+        realloc: *const fn (this: *anyopaque, mem: *anyopaque, size: usize) callconv(.Thiscall) ?[*]u8,
         _free: *const anyopaque,
-        free: *const fn (this: *anyopaque, mem: *anyopaque) callconv(Virtual) void,
+        free: *const fn (this: *anyopaque, mem: *anyopaque) callconv(.Thiscall) void,
     };
 
     fn vt(self: *MemAlloc) *const VTable {

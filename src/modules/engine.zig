@@ -15,8 +15,6 @@ const ITraceFilter = sdk.ITraceFilter;
 
 const zhook = @import("zhook");
 
-const Virtual = std.builtin.CallingConvention.Thiscall;
-
 pub var module: Module = .{
     .init = init,
     .deinit = deinit,
@@ -32,7 +30,7 @@ const IVEngineServer = extern struct {
     };
 
     pub fn pEntityOfEntIndex(self: *IVEngineServer, index: c_int) ?*Edict {
-        const _pEntityOfEntIndex: *const fn (this: *anyopaque, index: c_int) callconv(Virtual) ?*Edict = @ptrCast(self._vt[VTIndex.pEntityOfEntIndex]);
+        const _pEntityOfEntIndex: *const fn (this: *anyopaque, index: c_int) callconv(.Thiscall) ?*Edict = @ptrCast(self._vt[VTIndex.pEntityOfEntIndex]);
         return _pEntityOfEntIndex(self, index);
     }
 };
@@ -46,12 +44,12 @@ const IVEngineClient = extern struct {
     };
 
     pub fn clientCmd(self: *IVEngineClient, command: [*:0]const u8) void {
-        const _clientCmd: *const fn (this: *anyopaque, command: [*:0]const u8) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.clientCmd]);
+        const _clientCmd: *const fn (this: *anyopaque, command: [*:0]const u8) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.clientCmd]);
         _clientCmd(self, command);
     }
 
     pub fn isInGame(self: *IVEngineClient) bool {
-        const _isInGame: *const fn (this: *anyopaque) callconv(Virtual) bool = @ptrCast(self._vt[VTIndex.isInGame]);
+        const _isInGame: *const fn (this: *anyopaque) callconv(.Thiscall) bool = @ptrCast(self._vt[VTIndex.isInGame]);
         return _isInGame(self);
     }
 };
@@ -65,12 +63,12 @@ const IEngineTrace = extern struct {
     };
 
     pub fn traceRay(self: *IEngineTrace, ray: *const Ray, mask: c_uint, filter: ?*ITraceFilter, trace: *Trace) void {
-        const _traceRay: *const fn (this: *anyopaque, ray: *const Ray, mask: c_uint, filter: ?*ITraceFilter, trace: *Trace) callconv(Virtual) void = @ptrCast(self._vt[VTIndex.traceRay]);
+        const _traceRay: *const fn (this: *anyopaque, ray: *const Ray, mask: c_uint, filter: ?*ITraceFilter, trace: *Trace) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.traceRay]);
         _traceRay(self, ray, mask, filter, trace);
     }
 
     pub fn pointOutsideWorld(self: *IEngineTrace, pt_test: Vector) bool {
-        const _pointOutsideWorld: *const fn (this: *anyopaque, pt_test: *const Vector) callconv(Virtual) bool = @ptrCast(self._vt[VTIndex.pointOutsideWorld]);
+        const _pointOutsideWorld: *const fn (this: *anyopaque, pt_test: *const Vector) callconv(.Thiscall) bool = @ptrCast(self._vt[VTIndex.pointOutsideWorld]);
         return _pointOutsideWorld(self, &pt_test);
     }
 };
@@ -92,7 +90,7 @@ pub const SignonState = enum(c_int) {
     changelevel,
 };
 
-fn hookedSetSignonState(this: *anyopaque, state: SignonState) callconv(Virtual) void {
+fn hookedSetSignonState(this: *anyopaque, state: SignonState) callconv(.Thiscall) void {
     origSetSignonState.?(this, state);
 
     if (state == .full) {
