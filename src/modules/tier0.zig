@@ -3,14 +3,13 @@ const std = @import("std");
 const Module = @import("Module.zig");
 
 pub var module: Module = .{
+    .name = "tier0",
     .init = init,
     .deinit = deinit,
 };
 
-fn init() void {
-    module.loaded = false;
-
-    var lib = std.DynLib.open("tier0.dll") catch return;
+fn init() bool {
+    var lib = std.DynLib.open("tier0.dll") catch return false;
     defer lib.close();
 
     const names = .{
@@ -22,12 +21,12 @@ fn init() void {
     inline for (comptime std.meta.fieldNames(@TypeOf(names))) |field| {
         const func = &@field(@This(), field);
         const name = @field(names, field);
-        func.* = lib.lookup(@TypeOf(func.*), name) orelse return;
+        func.* = lib.lookup(@TypeOf(func.*), name) orelse return false;
     }
 
-    memalloc = (lib.lookup(**MemAlloc, "g_pMemAlloc") orelse return).*;
+    memalloc = (lib.lookup(**MemAlloc, "g_pMemAlloc") orelse return false).*;
 
-    module.loaded = true;
+    return true;
 }
 
 fn deinit() void {}

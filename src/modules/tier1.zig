@@ -414,27 +414,26 @@ const ICvar = extern struct {
 pub var icvar: *ICvar = undefined;
 
 pub var module: Module = .{
+    .name = "tier1",
     .init = init,
     .deinit = deinit,
 };
 
-fn init() void {
-    module.loaded = false;
-
+fn init() bool {
     icvar = @ptrCast(interfaces.engineFactory("VEngineCvar004", null) orelse {
         std.log.err("Failed to get ICvar interface", .{});
-        return;
+        return false;
     });
 
     icvar.allocateDLLIDentifier();
 
     const cvar = icvar.findVar("sv_gravity") orelse {
         std.log.err("Failed to get ConVar vtable", .{});
-        return;
+        return false;
     };
     const cmd = icvar.findCommand("kill") orelse {
         std.log.err("Failed to get ConCommand vtable", .{});
-        return;
+        return false;
     };
 
     // Stealing vtables from existing command and cvar
@@ -451,7 +450,7 @@ fn init() void {
     ConCommand.vtable = cmd_vt_ptr.*;
     ConCommand.vtable.base.getDLLIdentifier = ConCommandBase.getDLLIdentifier;
 
-    module.loaded = true;
+    return true;
 }
 
 fn deinit() void {

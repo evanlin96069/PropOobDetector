@@ -14,6 +14,8 @@ const Color = @import("sdk").Color;
 const Feature = @import("Feature.zig");
 
 pub var feature: Feature = .{
+    .name = "dev",
+    .shouldLoad = shouldLoad,
     .init = init,
     .deinit = deinit,
 };
@@ -84,6 +86,10 @@ fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
+fn shouldLoad() bool {
+    return true;
+}
+
 fn onPaint() void {
     if (pod_hud_debug.getBool()) {
         const screen = hud.imatsystem.getScreenSize();
@@ -121,9 +127,7 @@ fn onSessionStart() void {
     std.log.debug("Session Start!", .{});
 }
 
-fn init() void {
-    feature.loaded = false;
-
+fn init() bool {
     pod_datamap_print.register();
     pod_datamap_walk.register();
 
@@ -132,7 +136,7 @@ fn init() void {
     event.session_start.connect(onSessionStart);
     event.paint.connect(onPaint);
 
-    feature.loaded = true;
+    return true;
 }
 
 fn deinit() void {}

@@ -17,6 +17,7 @@ const ITraceFilter = sdk.ITraceFilter;
 const zhook = @import("zhook");
 
 pub var module: Module = .{
+    .name = "engine",
     .init = init,
     .deinit = deinit,
 };
@@ -108,34 +109,32 @@ const SetSignonState_patterns = zhook.mem.makePatterns(.{
     "55 8B EC 56 8B F1 8B 0D ?? ?? ?? ?? 8B 01 8B 40 ?? FF D0 84 C0",
 });
 
-fn init() void {
-    module.loaded = false;
-
+fn init() bool {
     server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
         std.log.err("Failed to get IVEngineServer interface", .{});
-        return;
+        return false;
     });
 
     const client_info = interfaces.create(interfaces.engineFactory, "VEngineClient", .{ 13, 14 }) orelse {
         std.log.err("Failed to get IVEngineClient interface", .{});
-        return;
+        return false;
     };
     client = @ptrCast(client_info.interface);
     sdk_version = if (client_info.version == 14) 2013 else 2007;
 
     server = @ptrCast(interfaces.engineFactory("VEngineServer021", null) orelse {
         std.log.err("Failed to get IVEngineServer interface", .{});
-        return;
+        return false;
     });
 
     trace_server = @ptrCast(interfaces.engineFactory("EngineTraceServer003", null) orelse {
         std.log.err("Failed to get EngineTraceServer interface", .{});
-        return;
+        return false;
     });
 
     trace_client = @ptrCast(interfaces.engineFactory("EngineTraceClient003", null) orelse {
         std.log.err("Failed to get EngineTraceClient interface", .{});
-        return;
+        return false;
     });
 
     origSetSignonState = core.hook_manager.findAndHook(
@@ -151,7 +150,11 @@ fn init() void {
         break :blk null;
     };
 
-    module.loaded = true;
+    if (origSetSignonState != null) {
+        event.session_start.works = true;
+    }
+
+    return true;
 }
 
 fn deinit() void {}

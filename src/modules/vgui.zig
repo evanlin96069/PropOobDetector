@@ -10,6 +10,7 @@ const Module = @import("Module.zig");
 const Color = @import("sdk").Color;
 
 pub var module: Module = .{
+    .name = "vgui",
     .init = init,
     .deinit = deinit,
 };
@@ -200,12 +201,10 @@ var ipanel: *IPanel = undefined;
 var ischeme_mgr: *ISchemeManager = undefined;
 pub var ischeme: *IScheme = undefined;
 
-fn init() void {
-    module.loaded = false;
-
+fn init() bool {
     const imatsystem_info = interfaces.create(interfaces.engineFactory, "MatSystemSurface", .{ 6, 8 }) orelse {
         std.log.err("Failed to get IMatSystem interface", .{});
-        return;
+        return false;
     };
     imatsystem = @ptrCast(imatsystem_info.interface);
     switch (imatsystem_info.version) {
@@ -228,22 +227,22 @@ fn init() void {
 
     ischeme_mgr = @ptrCast(interfaces.engineFactory("VGUI_Scheme010", null) orelse {
         std.log.err("Failed to get ISchemeManager interface", .{});
-        return;
+        return false;
     });
 
     ischeme = ischeme_mgr.getIScheme(ischeme_mgr.getDefaultScheme()) orelse {
         std.log.err("Failed to get IScheme", .{});
-        return;
+        return false;
     };
 
     ienginevgui = @ptrCast(interfaces.engineFactory("VEngineVGui001", null) orelse {
         std.log.err("Failed to get IEngineVgui interface", .{});
-        return;
+        return false;
     });
 
     ipanel = @ptrCast(interfaces.engineFactory("VGUI_Panel009", null) orelse {
         std.log.err("Failed to get IPanel interface", .{});
-        return;
+        return false;
     });
 
     IPanel.origPaintTraverse = core.hook_manager.hookVMT(
@@ -253,10 +252,11 @@ fn init() void {
         IPanel.hookedPaintTraverse,
     ) catch {
         std.log.err("Failed to hook PaintTraverse", .{});
-        return;
+        return false;
     };
+    event.paint.works = true;
 
-    module.loaded = true;
+    return true;
 }
 
 fn deinit() void {}

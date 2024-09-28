@@ -133,26 +133,30 @@ const datamap_patterns = zhook.mem.makePatterns(.{
 });
 
 pub var feature: Feature = .{
+    .name = "datamap",
+    .shouldLoad = shouldLoad,
     .init = init,
     .deinit = deinit,
 };
 
-fn init() void {
-    feature.loaded = false;
+fn shouldLoad() bool {
+    return true;
+}
 
-    const server_dll = zhook.mem.getModule("server") orelse return;
-    const client_dll = zhook.mem.getModule("client") orelse return;
+fn init() bool {
+    const server_dll = zhook.mem.getModule("server") orelse return false;
+    const client_dll = zhook.mem.getModule("client") orelse return false;
 
     var server_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer server_patterns.deinit();
     zhook.mem.scanAllPatterns(server_dll, datamap_patterns[0..], &server_patterns) catch {
-        return;
+        return false;
     };
 
     var client_patterns = std.ArrayList(MatchedPattern).init(tier0.allocator);
     defer client_patterns.deinit();
     zhook.mem.scanAllPatterns(client_dll, datamap_patterns[0..], &client_patterns) catch {
-        return;
+        return false;
     };
 
     server_map = std.StringHashMap(std.StringHashMap(usize)).init(tier0.allocator);
@@ -165,7 +169,7 @@ fn init() void {
             addMap(info.map, &server_map) catch {
                 server_map.deinit();
                 client_map.deinit();
-                return;
+                return false;
             };
         }
     }
@@ -177,12 +181,12 @@ fn init() void {
             addMap(info.map, &client_map) catch {
                 server_map.deinit();
                 client_map.deinit();
-                return;
+                return false;
             };
         }
     }
 
-    feature.loaded = true;
+    return true;
 }
 
 fn deinit() void {

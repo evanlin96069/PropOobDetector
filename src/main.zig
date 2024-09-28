@@ -41,7 +41,6 @@ fn unload(_: *anyopaque) callconv(.Thiscall) void {
         return;
     }
 
-    event.deinit();
     core.deinit();
 
     plugin_loaded = false;

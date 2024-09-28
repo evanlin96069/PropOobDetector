@@ -7,6 +7,7 @@ fn Event(comptime CallbackFn: type) type {
         const Self = @This();
 
         alloc: std.mem.Allocator,
+        works: bool = false,
         callbacks: std.ArrayList(CallbackFn),
 
         pub fn init(alloc: std.mem.Allocator) Self {
@@ -35,6 +36,10 @@ fn Event(comptime CallbackFn: type) type {
 pub var paint = Event(*const fn () void).init(tier0.allocator);
 pub var tick = Event(*const fn () void).init(tier0.allocator);
 pub var session_start = Event(*const fn () void).init(tier0.allocator);
+
+pub fn init() void {
+    tick.works = true;
+}
 
 pub fn deinit() void {
     paint.deinit();

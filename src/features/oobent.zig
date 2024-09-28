@@ -20,6 +20,8 @@ const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
 
 pub var feature: Feature = .{
+    .name = "oobent",
+    .shouldLoad = shouldLoad,
     .init = init,
     .deinit = deinit,
 };
@@ -158,6 +160,10 @@ fn detect_oob_ents(comptime CCollisionProperty: type) void {
     }
 }
 
+fn shouldLoad() bool {
+    return event.paint.works and event.tick.works;
+}
+
 fn onTick() void {
     if (engine.sdk_version == 2013) {
         detect_oob_ents(sdk.CCollisionPropertyV2);
@@ -232,16 +238,14 @@ fn onPaint() void {
     }
 }
 
-fn init() void {
-    feature.loaded = false;
-
+fn init() bool {
     if (datamap.server_map.get("CBaseEntity")) |map| {
-        field_m_iClassname = map.get("m_iClassname") orelse return;
-        field_m_Collision = map.get("m_hMovePeer") orelse return;
+        field_m_iClassname = map.get("m_iClassname") orelse return false;
+        field_m_Collision = map.get("m_hMovePeer") orelse return false;
         field_m_Collision += 4; // m_Collision is not in datamap, use field before it
     } else {
         std.log.info("Cannot find CBaseEntity data map", .{});
-        return;
+        return false;
     }
 
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);
@@ -255,7 +259,7 @@ fn init() void {
     event.paint.connect(onPaint);
     event.tick.connect(onTick);
 
-    feature.loaded = true;
+    return true;
 }
 
 fn deinit() void {

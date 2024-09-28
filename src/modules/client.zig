@@ -4,6 +4,7 @@ const interfaces = @import("../interfaces.zig");
 const Module = @import("Module.zig");
 
 pub var module: Module = .{
+    .name = "client",
     .init = init,
     .deinit = deinit,
 };
@@ -29,19 +30,19 @@ const IClientEntityList = extern struct {
 
 pub var entlist: *IClientEntityList = undefined;
 
-fn init() void {
+fn init() bool {
     module.loaded = false;
     const clientFactory = interfaces.getFactory("client.dll") orelse {
         std.log.err("Failed to get client interface factory", .{});
-        return;
+        return false;
     };
 
     entlist = @ptrCast(clientFactory("VClientEntityList003", null) orelse {
         std.log.err("Failed to get IClientEntityList interface", .{});
-        return;
+        return false;
     });
 
-    module.loaded = true;
+    return true;
 }
 
 fn deinit() void {}

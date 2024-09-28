@@ -1,5 +1,8 @@
+const std = @import("std");
 const builtin = @import("builtin");
+
 const tier0 = @import("modules.zig").tier0;
+const event = @import("event.zig");
 
 const Module = @import("modules/Module.zig");
 const Feature = @import("features/Feature.zig");
@@ -32,24 +35,36 @@ const features: []const *Feature = mods: {
     }
 
     if (builtin.mode == .Debug) {
-        mods = mods ++ .{&@import("features/test.zig").feature};
+        mods = mods ++ .{&@import("features/dev.zig").feature};
     }
 
     break :mods mods;
 };
 
 pub fn init() bool {
+    event.init();
     hook_manager = HookManager.init(tier0.allocator);
 
     for (modules) |module| {
-        module.init();
+        module.loaded = module.init();
         if (!module.loaded) {
+            std.log.err("Failed to load module {s}.", .{module.name});
             return false;
         }
+        std.log.debug("Module {s} loaded.", .{module.name});
     }
 
     for (features) |feature| {
-        feature.init();
+        if (feature.shouldLoad()) {
+            feature.loaded = feature.init();
+            if (!feature.loaded) {
+                std.log.warn("Failed to load feature {s}.", .{feature.name});
+            } else {
+                std.log.debug("Feature {s} loaded.", .{feature.name});
+            }
+        } else {
+            std.log.warn("Skipped loading feature {s},", .{feature.name});
+        }
     }
 
     return true;
@@ -58,7 +73,7 @@ pub fn init() bool {
 pub fn deinit() void {
     for (modules) |module| {
         if (!module.loaded) {
-            return;
+            continue;
         }
         module.deinit();
         module.loaded = false;
@@ -73,4 +88,5 @@ pub fn deinit() void {
     }
 
     hook_manager.deinit();
+    event.deinit();
 }
