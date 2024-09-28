@@ -3,6 +3,7 @@ const std = @import("std");
 const tier0 = @import("tier0.zig");
 const interfaces = @import("../interfaces.zig");
 const core = @import("../core.zig");
+const event = @import("../event.zig");
 
 const Module = @import("Module.zig");
 
@@ -43,7 +44,7 @@ const IPanel = extern struct {
                 S.found_panel_id = true;
             }
         } else if (S.panel_id == vgui_panel) {
-            core.emitPaint();
+            event.paint.emit(.{});
         }
     }
 };

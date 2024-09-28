@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const event = @import("../event.zig");
+
 const modules = @import("../modules.zig");
 const convar = modules.tier1;
 const hud = modules.vgui;
@@ -14,8 +16,6 @@ const Feature = @import("Feature.zig");
 pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
-    .onPaint = paint,
-    .onSessionStart = onSessionStart,
 };
 
 var pod_hud_debug = convar.Variable.init(.{
@@ -84,7 +84,7 @@ fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
-fn paint() void {
+fn onPaint() void {
     if (pod_hud_debug.getBool()) {
         const screen = hud.imatsystem.getScreenSize();
         const cols = 8;
@@ -128,6 +128,9 @@ fn init() void {
     pod_datamap_walk.register();
 
     pod_hud_debug.register();
+
+    event.session_start.connect(onSessionStart);
+    event.paint.connect(onPaint);
 
     feature.loaded = true;
 }

@@ -3,6 +3,7 @@ const std = @import("std");
 const core = @import("core.zig");
 const interfaces = @import("interfaces.zig");
 const tier0 = @import("modules.zig").tier0;
+const event = @import("event.zig");
 
 pub const std_options: std.Options = .{
     .log_level = .debug,
@@ -40,6 +41,7 @@ fn unload(_: *anyopaque) callconv(.Thiscall) void {
         return;
     }
 
+    event.deinit();
     core.deinit();
 
     plugin_loaded = false;
@@ -70,7 +72,7 @@ fn serverActivate(
 
 fn gameFrame(_: *anyopaque, simulating: bool) callconv(.Thiscall) void {
     if (simulating) {
-        core.emitTick();
+        event.tick.emit(.{});
     }
 }
 

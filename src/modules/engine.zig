@@ -5,6 +5,7 @@ const interfaces = @import("../interfaces.zig");
 const Module = @import("Module.zig");
 
 const core = @import("../core.zig");
+const event = @import("../event.zig");
 
 const sdk = @import("sdk");
 const Edict = sdk.Edict;
@@ -94,7 +95,7 @@ fn hookedSetSignonState(this: *anyopaque, state: SignonState) callconv(.Thiscall
     origSetSignonState.?(this, state);
 
     if (state == .full) {
-        core.emitSessionStart();
+        event.session_start.emit(.{});
     }
 }
 

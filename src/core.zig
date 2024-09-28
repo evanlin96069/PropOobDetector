@@ -5,6 +5,7 @@ const Module = @import("modules/Module.zig");
 const Feature = @import("features/Feature.zig");
 
 const HookManager = @import("zhook").HookManager;
+
 pub var hook_manager: HookManager = undefined;
 
 const modules: []const *Module = mods: {
@@ -72,37 +73,4 @@ pub fn deinit() void {
     }
 
     hook_manager.deinit();
-}
-
-pub fn emitTick() void {
-    for (features) |feature| {
-        if (!feature.loaded) {
-            continue;
-        }
-        if (feature.onTick) |onTick| {
-            onTick();
-        }
-    }
-}
-
-pub fn emitPaint() void {
-    for (features) |feature| {
-        if (!feature.loaded) {
-            continue;
-        }
-        if (feature.onPaint) |onPaint| {
-            onPaint();
-        }
-    }
-}
-
-pub fn emitSessionStart() void {
-    for (features) |feature| {
-        if (!feature.loaded) {
-            continue;
-        }
-        if (feature.onSessionStart) |onSessionStart| {
-            onSessionStart();
-        }
-    }
 }

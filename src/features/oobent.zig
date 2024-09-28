@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const event = @import("../event.zig");
+
 const modules = @import("../modules.zig");
 const tier0 = modules.tier0;
 const convar = modules.tier1;
@@ -20,8 +22,6 @@ const ITraceFilter = sdk.ITraceFilter;
 pub var feature: Feature = .{
     .init = init,
     .deinit = deinit,
-    .onTick = onTick,
-    .onPaint = onPaint,
 };
 
 var field_m_iClassname: usize = undefined;
@@ -247,10 +247,13 @@ fn init() void {
     font_DefaultFixedOutline = hud.ischeme.getFont("DefaultFixedOutline", false);
     font_DefaultFixedOutline_tall = hud.imatsystem.getFontTall(font_DefaultFixedOutline);
 
+    oob_ents = std.ArrayList(EntityInfo).init(tier0.allocator);
+
     pod_print_oob_ents.register();
     pod_hud_oob_ents.register();
 
-    oob_ents = std.ArrayList(EntityInfo).init(tier0.allocator);
+    event.paint.connect(onPaint);
+    event.tick.connect(onTick);
 
     feature.loaded = true;
 }
