@@ -3,8 +3,8 @@ const std = @import("std");
 const event = @import("../event.zig");
 
 const modules = @import("../modules.zig");
-const convar = modules.tier1;
-const hud = modules.vgui;
+const tier1 = modules.tier1;
+const vgui = modules.vgui;
 const engine = modules.engine;
 
 const datamap = @import("datamap.zig");
@@ -20,7 +20,7 @@ pub var feature: Feature = .{
     .deinit = deinit,
 };
 
-var pod_hud_debug = convar.Variable.init(.{
+var pod_hud_debug = tier1.Variable.init(.{
     .name = "pod_hud_debug",
     .flags = .{
         .hidden = true,
@@ -29,7 +29,7 @@ var pod_hud_debug = convar.Variable.init(.{
     .default_value = "0",
 });
 
-var pod_datamap_print = convar.ConCommand.init(.{
+var pod_datamap_print = tier1.ConCommand.init(.{
     .name = "pod_datamap_print",
     .flags = .{
         .hidden = true,
@@ -38,7 +38,7 @@ var pod_datamap_print = convar.ConCommand.init(.{
     .command_callback = datamap_print_Fn,
 });
 
-fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
+fn datamap_print_Fn(args: *const tier1.CCommand) callconv(.C) void {
     _ = args;
 
     var server_it = datamap.server_map.iterator();
@@ -54,7 +54,7 @@ fn datamap_print_Fn(args: *const convar.CCommand) callconv(.C) void {
     }
 }
 
-var pod_datamap_walk = convar.ConCommand.init(.{
+var pod_datamap_walk = tier1.ConCommand.init(.{
     .name = "pod_datamap_walk",
     .flags = .{
         .hidden = true,
@@ -63,7 +63,7 @@ var pod_datamap_walk = convar.ConCommand.init(.{
     .command_callback = datamap_walk_Fn,
 });
 
-fn datamap_walk_Fn(args: *const convar.CCommand) callconv(.C) void {
+fn datamap_walk_Fn(args: *const tier1.CCommand) callconv(.C) void {
     if (args.argc != 2) {
         std.log.info("Usage: pod_datamap_walk <class name>", .{});
         return;
@@ -92,7 +92,7 @@ fn shouldLoad() bool {
 
 fn onPaint() void {
     if (pod_hud_debug.getBool()) {
-        const screen = hud.imatsystem.getScreenSize();
+        const screen = vgui.imatsystem.getScreenSize();
         const cols = 8;
         const rows = 8;
         const padding: i32 = 10;
@@ -116,8 +116,8 @@ fn onPaint() void {
                 const x1 = x0 + rect_width;
                 const y1 = y0 + rect_height;
 
-                hud.imatsystem.drawSetColor(colors[@as(u32, @intCast(row + col)) % colors.len]);
-                hud.imatsystem.drawFilledRect(x0, y0, x1, y1);
+                vgui.imatsystem.drawSetColor(colors[@as(u32, @intCast(row + col)) % colors.len]);
+                vgui.imatsystem.drawFilledRect(x0, y0, x1, y1);
             }
         }
     }
