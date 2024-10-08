@@ -109,24 +109,32 @@ pub const Color = packed struct {
 };
 
 pub const Vector = extern struct {
-    x: f32,
-    y: f32,
-    z: f32,
+    x: f32 = 0.0,
+    y: f32 = 0.0,
+    z: f32 = 0.0,
 
     pub fn add(a: Vector, b: Vector) Vector {
-        var res: Vector = undefined;
-        res.x = a.x + b.x;
-        res.y = a.y + b.y;
-        res.z = a.z + b.z;
-        return res;
+        return Vector{
+            .x = a.x + b.x,
+            .y = a.y + b.y,
+            .z = a.z + b.z,
+        };
     }
 
     pub fn subtract(a: Vector, b: Vector) Vector {
-        var res: Vector = undefined;
-        res.x = a.x - b.x;
-        res.y = a.y - b.y;
-        res.z = a.z - b.z;
-        return res;
+        return Vector{
+            .x = a.x - b.x,
+            .y = a.y - b.y,
+            .z = a.z - b.z,
+        };
+    }
+
+    pub fn scale(v: Vector, n: f32) Vector {
+        return Vector{
+            .x = v.x * n,
+            .y = v.y * n,
+            .z = v.z * n,
+        };
     }
 
     pub fn eql(a: Vector, b: Vector) bool {
@@ -159,8 +167,22 @@ pub const Vector = extern struct {
         self.z = 0.0;
     }
 
-    pub fn getlengthSqr(self: *Vector) f32 {
+    pub fn getlengthSqr(self: *const Vector) f32 {
         return self.x * self.x + self.y * self.y + self.z * self.z;
+    }
+
+    pub fn getlength(self: *const Vector) f32 {
+        return @sqrt(self.x * self.x + self.y * self.y + self.z * self.z);
+    }
+
+    pub fn getlength2D(self: *const Vector) f32 {
+        return @sqrt(self.x * self.x + self.y * self.y);
+    }
+
+    pub fn normalize(self: *const Vector) Vector {
+        const length = self.getlength();
+        if (length == 0) return self.*;
+        return self.scale(1 / length);
     }
 };
 
@@ -373,4 +395,22 @@ pub const CCollisionPropertyV2 = extern struct {
         }
         return Vector.transform(obb_center, self.collisionToWorldTransform());
     }
+};
+
+pub const CUserCmd = struct {
+    vt: *anyopaque,
+    command_number: c_int,
+    tick_count: c_int,
+    view_angles: QAngle,
+    forward_move: f32,
+    side_move: f32,
+    up_move: f32,
+    buttons: c_int,
+    impluse: u8,
+    weapon_select: c_int,
+    weapon_subtype: c_int,
+    random_seed: c_int,
+    mouse_dx: c_short,
+    mouse_dy: c_short,
+    has_been_predicted: bool,
 };

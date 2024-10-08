@@ -240,8 +240,14 @@ fn onPaint() void {
 
 fn init() bool {
     if (datamap.server_map.get("CBaseEntity")) |map| {
-        field_m_iClassname = map.get("m_iClassname") orelse return false;
-        field_m_Collision = map.get("m_hMovePeer") orelse return false;
+        field_m_iClassname = map.get("m_iClassname") orelse {
+            std.log.debug("Cannot find CBaseEntity::m_iClassname offset", .{});
+            return false;
+        };
+        field_m_Collision = map.get("m_hMovePeer") orelse {
+            std.log.debug("Cannot find CBaseEntity::m_hMovePeer offset", .{});
+            return false;
+        };
         field_m_Collision += 4; // m_Collision is not in datamap, use field before it
     } else {
         std.log.info("Cannot find CBaseEntity data map", .{});

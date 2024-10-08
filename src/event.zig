@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const tier0 = @import("modules.zig").tier0;
+const CUserCmd = @import("sdk").CUserCmd;
 
 fn Event(comptime CallbackFn: type) type {
     return struct {
@@ -36,6 +37,8 @@ fn Event(comptime CallbackFn: type) type {
 pub var paint = Event(*const fn () void).init(tier0.allocator);
 pub var tick = Event(*const fn () void).init(tier0.allocator);
 pub var session_start = Event(*const fn () void).init(tier0.allocator);
+pub var create_move = Event(*const fn (cmd: *CUserCmd) void).init(tier0.allocator);
+pub var decode_usercmd_from_buffer = Event(*const fn (cmd: *CUserCmd) void).init(tier0.allocator);
 
 pub fn init() void {
     tick.works = true;
@@ -45,4 +48,6 @@ pub fn deinit() void {
     paint.deinit();
     tick.deinit();
     session_start.deinit();
+    create_move.deinit();
+    decode_usercmd_from_buffer.deinit();
 }

@@ -10,6 +10,7 @@ const event = @import("../event.zig");
 const sdk = @import("sdk");
 const Edict = sdk.Edict;
 const Vector = sdk.Vector;
+const QAngle = sdk.QAngle;
 const Ray = sdk.Ray;
 const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
@@ -43,6 +44,8 @@ const IVEngineClient = extern struct {
     const VTIndex = struct {
         const clientCmd = 7;
         const isInGame = 26;
+        const getViewAngles = 19;
+        const setViewAngles = 20;
     };
 
     pub fn clientCmd(self: *IVEngineClient, command: [*:0]const u8) void {
@@ -53,6 +56,18 @@ const IVEngineClient = extern struct {
     pub fn isInGame(self: *IVEngineClient) bool {
         const _isInGame: *const fn (this: *anyopaque) callconv(.Thiscall) bool = @ptrCast(self._vt[VTIndex.isInGame]);
         return _isInGame(self);
+    }
+
+    pub fn getViewAngles(self: *IVEngineClient) QAngle {
+        var va: QAngle = undefined;
+        const _getViewAngles: *const fn (this: *anyopaque, va: *QAngle) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.getViewAngles]);
+        _getViewAngles(self, &va);
+        return va;
+    }
+
+    pub fn setViewAngles(self: *IVEngineClient, va: QAngle) void {
+        const _setViewAngles: *const fn (this: *anyopaque, va: *QAngle) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.setViewAngles]);
+        _setViewAngles(self, &va);
     }
 };
 

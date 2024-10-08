@@ -17,6 +17,7 @@ const modules: []const *Module = mods: {
         @import("modules/tier0.zig"),
         @import("modules/tier1.zig"),
         @import("modules/engine.zig"),
+        @import("modules/server.zig"),
         @import("modules/client.zig"),
         @import("modules/vgui.zig"),
     }) |file| {
@@ -29,6 +30,8 @@ const features: []const *Feature = mods: {
     var mods: []const *Feature = &.{};
     for (&.{
         @import("features/datamap.zig"),
+        @import("features/playerio.zig"),
+        @import("features/strafehud.zig"),
         @import("features/oobent.zig"),
     }) |file| {
         mods = mods ++ .{&file.feature};
@@ -63,7 +66,7 @@ pub fn init() bool {
                 std.log.debug("Feature {s} loaded.", .{feature.name});
             }
         } else {
-            std.log.warn("Skipped loading feature {s},", .{feature.name});
+            std.log.warn("Skipped loading feature {s}.", .{feature.name});
         }
     }
 

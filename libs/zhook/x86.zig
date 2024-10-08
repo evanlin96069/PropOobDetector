@@ -498,6 +498,11 @@ pub const Opcode = struct {
     pub const op3dnow = 0x0F;
 };
 
+// Constructs a ModRM byte
+pub fn modrm(mod: u8, reg: u8, rm: u8) u8 {
+    return mod << 6 | reg << 3 | rm;
+}
+
 fn mrmsib(b: [*]const u8, address_len: usize) usize {
     if (address_len == 4 or b[0] & 0xC0 != 0) {
         const sib: usize = if (address_len == 4 and b[0] < 0xC0 and (b[0] & 7) == 4) 1 else 0;

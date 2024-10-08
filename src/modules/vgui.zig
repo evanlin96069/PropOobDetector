@@ -83,6 +83,7 @@ const IMatSystemSurface = extern struct {
         var getScreenSize: usize = undefined;
         var getFontTall: usize = undefined;
         var getTextSize: usize = undefined;
+        var drawOutlinedCircle: usize = undefined;
     };
 
     pub fn drawSetColor(self: *IMatSystemSurface, color: Color) void {
@@ -161,6 +162,11 @@ const IMatSystemSurface = extern struct {
         const _getFontTall: *const fn (this: *anyopaque, font: c_ulong) callconv(.Thiscall) c_int = @ptrCast(self._vt[VTIndex.getFontTall]);
         return _getFontTall(self, font);
     }
+
+    pub fn drawOutlinedCircle(self: *IMatSystemSurface, x: i32, y: i32, radius: i32, segments: i32) void {
+        const _drawOutlinedCircle: *const fn (this: *anyopaque, x: c_int, y: c_int, radius: c_int, segments: c_int) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.drawOutlinedCircle]);
+        _drawOutlinedCircle(self, x, y, radius, segments);
+    }
 };
 
 const ISchemeManager = extern struct {
@@ -212,6 +218,7 @@ fn init() bool {
             IMatSystemSurface.VTIndex.getScreenSize = 37;
             IMatSystemSurface.VTIndex.getFontTall = 67;
             IMatSystemSurface.VTIndex.getTextSize = 72;
+            IMatSystemSurface.VTIndex.drawOutlinedCircle = 96;
             IPanel.VTIndex.getName = 35;
             IPanel.VTIndex.paintTraverse = 40;
         },
@@ -219,6 +226,7 @@ fn init() bool {
             IMatSystemSurface.VTIndex.getScreenSize = 38;
             IMatSystemSurface.VTIndex.getFontTall = 69;
             IMatSystemSurface.VTIndex.getTextSize = 75;
+            IMatSystemSurface.VTIndex.drawOutlinedCircle = 99;
             IPanel.VTIndex.getName = 36;
             IPanel.VTIndex.paintTraverse = 41;
         },
