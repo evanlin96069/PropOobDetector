@@ -37,6 +37,23 @@ pub fn getPlayer(server: bool) ?*anyopaque {
     return client.entlist.getClientEntity(1);
 }
 
+pub const PlayerField = struct {
+    m_vecAbsOrigin: usize,
+    m_vecAbsVelocity: usize,
+    m_surfaceFriction: usize,
+    m_flMaxspeed: usize,
+    m_bDucked: usize,
+    m_hGroundEntity: usize,
+    m_nOldButtons: usize,
+};
+
+var server_player_field: PlayerField = undefined;
+var client_player_field: PlayerField = undefined;
+
+pub fn getPlayerField(server: bool) PlayerField {
+    return if (server) server_player_field else client_player_field;
+}
+
 pub fn getPlayerInfo(player: *anyopaque, cmd: *CUserCmd, player_field: PlayerField) PlayerInfo {
     const old_buttons = datamap.getField(c_int, player, player_field.m_nOldButtons).*;
 
@@ -112,19 +129,6 @@ pub var sv_friction: *ConVar = undefined;
 pub var sv_stopspeed: *ConVar = undefined;
 pub var sv_accelerate: *ConVar = undefined;
 pub const portal_sv_airaccelerate = 15.0;
-
-pub const PlayerField = struct {
-    m_vecAbsOrigin: usize,
-    m_vecAbsVelocity: usize,
-    m_surfaceFriction: usize,
-    m_flMaxspeed: usize,
-    m_bDucked: usize,
-    m_hGroundEntity: usize,
-    m_nOldButtons: usize,
-};
-
-pub var server_player_field: PlayerField = undefined;
-pub var client_player_field: PlayerField = undefined;
 
 fn shouldLoad() bool {
     return datamap.feature.loaded;

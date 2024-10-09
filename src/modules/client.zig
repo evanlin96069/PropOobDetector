@@ -73,7 +73,7 @@ const IInput = extern struct {
 
     fn hookedCreateMove(self: *IInput, sequence_number: c_int, input_sample_frametime: f32, active: bool) callconv(.Thiscall) void {
         origCreateMove(self, sequence_number, input_sample_frametime, active);
-        event.create_move.emit(.{self.getUserCmd(sequence_number)});
+        event.create_move.emit(.{ true, self.getUserCmd(sequence_number) });
     }
 
     const DecodeUserCmdFromBufferFunc = *const @TypeOf(hookedDecodeUserCmdFromBuffer);
@@ -81,7 +81,7 @@ const IInput = extern struct {
 
     fn hookedDecodeUserCmdFromBuffer(self: *IInput, buf: *anyopaque, sequence_number: c_int) callconv(.Thiscall) void {
         origDecodeUserCmdFromBuffer(self, buf, sequence_number);
-        event.decode_usercmd_from_buffer.emit(.{self.getUserCmd(sequence_number)});
+        event.create_move.emit(.{ false, self.getUserCmd(sequence_number) });
     }
 
     fn getUserCmd(self: *IInput, sequence_number: c_int) callconv(.Thiscall) *CUserCmd {
@@ -142,7 +142,6 @@ fn init() bool {
         std.log.err("Failed to hook CreateMove", .{});
         return false;
     };
-    event.create_move.works = true;
 
     IInput.origDecodeUserCmdFromBuffer = core.hook_manager.hookVMT(
         IInput.DecodeUserCmdFromBufferFunc,
@@ -153,7 +152,8 @@ fn init() bool {
         std.log.err("Failed to hook DecodeUserCmdFromBuffer", .{});
         return false;
     };
-    event.decode_usercmd_from_buffer.works = true;
+
+    event.create_move.works = true;
 
     const client = zhook.mem.getModule("client") orelse return false;
     const GetDamagePosition_match = zhook.mem.scanUniquePatterns(client, GetDamagePosition_patterns) orelse {

@@ -87,29 +87,20 @@ var cl_sidespeed: *ConVar = undefined;
 var wish_dir: Vector = undefined;
 var accel_values: std.ArrayList(f32) = undefined;
 
-fn onCreateMove(cmd: *CUserCmd) void {
+fn onCreateMove(server: bool, cmd: *CUserCmd) void {
     if (!pod_strafehud.getBool()) {
         return;
     }
-
-    const player = playerio.getPlayer(true) orelse {
+    const player = playerio.getPlayer(server) orelse {
         return;
     };
 
-    const player_info = playerio.getPlayerInfo(player, cmd, playerio.server_player_field);
-    setData(&player_info, cmd);
-}
+    const player_info = playerio.getPlayerInfo(
+        player,
+        cmd,
+        playerio.getPlayerField(server),
+    );
 
-fn onDecodeUserCmdFromBuffer(cmd: *CUserCmd) void {
-    if (!pod_strafehud.getBool()) {
-        return;
-    }
-
-    const player = playerio.getPlayer(false) orelse {
-        return;
-    };
-
-    const player_info = playerio.getPlayerInfo(player, cmd, playerio.client_player_field);
     setData(&player_info, cmd);
 }
 
@@ -314,8 +305,7 @@ fn onPaint() void {
 fn shouldLoad() bool {
     return playerio.feature.loaded and
         event.paint.works and
-        event.create_move.works and
-        event.decode_usercmd_from_buffer.works;
+        event.create_move.works;
 }
 
 fn init() bool {
@@ -347,7 +337,6 @@ fn init() bool {
     accel_values = std.ArrayList(f32).init(tier0.allocator);
 
     event.create_move.connect(onCreateMove);
-    event.decode_usercmd_from_buffer.connect(onDecodeUserCmdFromBuffer);
     event.paint.connect(onPaint);
 
     pod_strafehud.register();
