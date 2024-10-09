@@ -5,10 +5,10 @@ const event = @import("../event.zig");
 const modules = @import("../modules.zig");
 const tier0 = modules.tier0;
 const tier1 = modules.tier1;
-const vgui = modules.vgui;
 const engine = modules.engine;
 
 const datamap = @import("datamap.zig");
+const texthud = @import("texthud.zig");
 
 const Feature = @import("Feature.zig");
 
@@ -20,7 +20,7 @@ const Trace = sdk.Trace;
 const ITraceFilter = sdk.ITraceFilter;
 
 pub var feature: Feature = .{
-    .name = "oobent",
+    .name = "Oob entity",
     .shouldLoad = shouldLoad,
     .init = init,
     .deinit = deinit,
@@ -28,9 +28,6 @@ pub var feature: Feature = .{
 
 var field_m_iClassname: usize = undefined;
 var field_m_Collision: usize = undefined;
-
-var font_DefaultFixedOutline: c_ulong = 0;
-var font_DefaultFixedOutline_tall: c_int = 0;
 
 const EntityInfo = struct {
     index: c_int,
@@ -161,7 +158,7 @@ fn detect_oob_ents(comptime CCollisionProperty: type) void {
 }
 
 fn shouldLoad() bool {
-    return event.paint.works and event.tick.works;
+    return texthud.feature.loaded and event.tick.works;
 }
 
 fn onTick() void {
@@ -172,71 +169,40 @@ fn onTick() void {
     }
 }
 
-var cl_showfps: ?*tier1.ConVar = null;
-var cl_showpos: ?*tier1.ConVar = null;
-
-fn onPaint() void {
-    if (!engine.client.isInGame()) {
-        return;
+const OobentTextHUD = struct {
+    fn shouldDraw() bool {
+        return pod_hud_oob_ents.getBool();
     }
 
-    if (!pod_hud_oob_ents.getBool()) {
-        return;
-    }
-
-    const screen = vgui.imatsystem.getScreenSize();
-
-    const x = screen.wide - 300 + 2;
-    var offset: c_int = 0;
-
-    if (cl_showfps == null) {
-        cl_showfps = tier1.icvar.findVar("cl_showfps");
-    }
-    if (cl_showpos == null) {
-        cl_showpos = tier1.icvar.findVar("cl_showpos");
-    }
-
-    if (cl_showfps) |v| {
-        if (v.getBool()) {
-            offset += 1;
+    fn paint() void {
+        if (engine.server.pEntityOfEntIndex(0) == null) {
+            texthud.drawTextHUD("oob entity: Server not loaded", .{});
+            return;
         }
-    }
-    if (cl_showpos) |v| {
-        if (v.getBool()) {
-            offset += 3;
+
+        texthud.drawTextHUD("oob entity count: {d}", .{oob_ents.items.len});
+
+        for (oob_ents.items) |ent| {
+            texthud.drawColorTextHUD(
+                .{
+                    .r = 255,
+                    .g = 200,
+                    .b = 200,
+                },
+                "({d}) {s}",
+                .{ ent.index, ent.name },
+            );
         }
     }
 
-    vgui.imatsystem.drawSetTextFont(font_DefaultFixedOutline);
-    vgui.imatsystem.drawSetTextColor(.{
-        .r = 255,
-        .g = 255,
-        .b = 255,
-        .a = 255,
-    });
-    vgui.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
-
-    if (engine.server.pEntityOfEntIndex(0) == null) {
-        vgui.imatsystem.drawPrintText("oob entity: Server not loaded", .{});
-        return;
+    fn register() void {
+        pod_hud_oob_ents.register();
+        texthud.addHUDElement(.{
+            .shouldDraw = shouldDraw,
+            .paint = paint,
+        });
     }
-
-    vgui.imatsystem.drawPrintText("oob entity count: {d}", .{oob_ents.items.len});
-    offset += 1;
-
-    vgui.imatsystem.drawSetTextColor(.{
-        .r = 255,
-        .g = 200,
-        .b = 200,
-        .a = 255,
-    });
-
-    for (oob_ents.items) |ent| {
-        vgui.imatsystem.drawSetTextPos(x, 2 + offset * (font_DefaultFixedOutline_tall + 2));
-        vgui.imatsystem.drawPrintText("({d}) {s}", .{ ent.index, ent.name });
-        offset += 1;
-    }
-}
+};
 
 fn init() bool {
     if (datamap.server_map.get("CBaseEntity")) |map| {
@@ -254,15 +220,12 @@ fn init() bool {
         return false;
     }
 
-    font_DefaultFixedOutline = vgui.ischeme.getFont("DefaultFixedOutline", false);
-    font_DefaultFixedOutline_tall = vgui.imatsystem.getFontTall(font_DefaultFixedOutline);
-
     oob_ents = std.ArrayList(EntityInfo).init(tier0.allocator);
 
     pod_print_oob_ents.register();
-    pod_hud_oob_ents.register();
 
-    event.paint.connect(onPaint);
+    OobentTextHUD.register();
+
     event.tick.connect(onTick);
 
     return true;

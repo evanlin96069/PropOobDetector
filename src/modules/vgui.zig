@@ -5,6 +5,8 @@ const interfaces = @import("../interfaces.zig");
 const core = @import("../core.zig");
 const event = @import("../event.zig");
 
+const zhook = @import("zhook");
+
 const Module = @import("Module.zig");
 
 const Color = @import("sdk").Color;
@@ -201,6 +203,18 @@ const IScheme = extern struct {
     }
 };
 
+fn hookedCFPSPanelShouldDraw(this: *anyopaque) callconv(.Thiscall) bool {
+    _ = this;
+    return false;
+}
+
+const CFPSPanelShouldDrawFunc = *const @TypeOf(hookedCFPSPanelShouldDraw);
+var origCFPSPanelShouldDraw: ?CFPSPanelShouldDrawFunc = null;
+
+const CFPSPanelShouldDraw_patterns = zhook.mem.makePatterns(.{
+    "80 3D ?? ?? ?? ?? 00 75 ?? A1 ?? ?? ?? ?? 83 78 ?? 00 74 ??",
+});
+
 pub var imatsystem: *IMatSystemSurface = undefined;
 pub var ienginevgui: *IEngineVGui = undefined;
 var ipanel: *IPanel = undefined;
@@ -263,6 +277,19 @@ fn init() bool {
         return false;
     };
     event.paint.works = true;
+
+    origCFPSPanelShouldDraw = core.hook_manager.findAndHook(
+        CFPSPanelShouldDrawFunc,
+        "client",
+        CFPSPanelShouldDraw_patterns,
+        hookedCFPSPanelShouldDraw,
+    ) catch |e| blk: {
+        switch (e) {
+            error.PatternNotFound => std.log.debug("Failed to hook CFPSPanel::ShouldDraw", .{}),
+            else => std.log.debug("Failed to hook CFPSPanel::ShouldDraw", .{}),
+        }
+        break :blk null;
+    };
 
     return true;
 }

@@ -43,9 +43,11 @@ const IVEngineClient = extern struct {
 
     const VTIndex = struct {
         const clientCmd = 7;
-        const isInGame = 26;
         const getViewAngles = 19;
         const setViewAngles = 20;
+        const isInGame = 26;
+        const getGameDirectory = 35;
+        const getLevelName = 51;
     };
 
     pub fn clientCmd(self: *IVEngineClient, command: [*:0]const u8) void {
@@ -68,6 +70,16 @@ const IVEngineClient = extern struct {
     pub fn setViewAngles(self: *IVEngineClient, va: QAngle) void {
         const _setViewAngles: *const fn (this: *anyopaque, va: *QAngle) callconv(.Thiscall) void = @ptrCast(self._vt[VTIndex.setViewAngles]);
         _setViewAngles(self, &va);
+    }
+
+    pub fn getGameDirectory(self: *IVEngineClient) [*:0]const u8 {
+        const _getGameDirectory: *const fn (this: *anyopaque) callconv(.Thiscall) [*:0]const u8 = @ptrCast(self._vt[VTIndex.getGameDirectory]);
+        return _getGameDirectory(self);
+    }
+
+    pub fn getLevelName(self: *IVEngineClient) [*:0]const u8 {
+        const _getLevelName: *const fn (this: *anyopaque) callconv(.Thiscall) [*:0]const u8 = @ptrCast(self._vt[VTIndex.getLevelName]);
+        return _getLevelName(self);
     }
 };
 

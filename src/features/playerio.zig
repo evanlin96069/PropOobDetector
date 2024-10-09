@@ -3,6 +3,7 @@ const std = @import("std");
 const Feature = @import("Feature.zig");
 
 const datamap = @import("datamap.zig");
+const texthud = @import("texthud.zig");
 
 const modules = @import("../modules.zig");
 const tier1 = modules.tier1;
@@ -58,6 +59,47 @@ pub fn getPlayerInfo(player: *anyopaque, cmd: *CUserCmd, player_field: PlayerFie
         .tick_time = 0.015,
     };
 }
+
+const PosTextHUD = struct {
+    var cl_showpos: ?*ConVar = null;
+
+    fn shouldDraw() bool {
+        if (cl_showpos == null) {
+            cl_showpos = tier1.icvar.findVar("cl_showpos");
+        }
+
+        if (cl_showpos) |v| {
+            return v.getBool();
+        }
+
+        return false;
+    }
+
+    fn paint() void {
+        var origin: Vector = client.mainViewOrigin().*;
+        var angles: QAngle = client.mainViewAngles().*;
+        var vel: Vector = .{};
+
+        const player = getPlayer(false);
+        if (player) |p| {
+            vel = datamap.getField(Vector, p, client_player_field.m_vecAbsVelocity).*;
+            if (cl_showpos.?.getInt() == 2) {
+                origin = datamap.getField(Vector, p, client_player_field.m_vecAbsOrigin).*;
+                angles = engine.client.getViewAngles();
+            }
+        }
+        texthud.drawTextHUD("pos:  {d:.2} {d:.2} {d:.2}", .{ origin.x, origin.y, origin.z });
+        texthud.drawTextHUD("ang:  {d:.2} {d:.2} {d:.2}", .{ angles.x, angles.y, angles.z });
+        texthud.drawTextHUD("vel:  {d:.2}", .{vel.getlength2D()});
+    }
+
+    fn register() void {
+        texthud.addHUDElement(.{
+            .shouldDraw = shouldDraw,
+            .paint = paint,
+        });
+    }
+};
 
 pub var feature: Feature = .{
     .name = "playerio",
@@ -219,6 +261,8 @@ fn init() bool {
         std.log.debug("Cannot find C_BasePlayer datamap", .{});
         return false;
     }
+
+    PosTextHUD.register();
 
     return true;
 }
