@@ -25,14 +25,14 @@ pub fn getVelocityAngles(player: *const PlayerInfo) Vector {
 }
 
 pub fn getGroundFrictionVelocity(player: *const PlayerInfo) Vector {
-    const friction = playerio.sv_friction.getFloat() * player.surface_friction;
+    const friction = player.friction * player.entity_friction;
     var vel = player.velocity;
 
     if (player.grounded) {
-        if (vel.getlength2D() >= playerio.sv_stopspeed.getFloat()) {
+        if (vel.getlength2D() >= player.stopspeed) {
             vel = vel.scale(1.0 - player.tick_time * friction);
-        } else if (vel.getlength2D() >= @max(0.1, player.tick_time * playerio.sv_stopspeed.getFloat() * friction)) {
-            vel = vel.subtract(vel.normalize().scale(player.tick_time * playerio.sv_stopspeed.getFloat() * friction));
+        } else if (vel.getlength2D() >= @max(0.1, player.tick_time * player.stopspeed * friction)) {
+            vel = vel.subtract(vel.normalize().scale(player.tick_time * player.stopspeed * friction));
         } else {
             vel = Vector{};
         }
@@ -47,8 +47,8 @@ pub fn getGroundFrictionVelocity(player: *const PlayerInfo) Vector {
 
 pub fn getMaxSpeed(player: *const PlayerInfo, wish_dir: Vector, not_aired: bool) f32 {
     const duck_multiplier: f32 = if (player.grounded and player.ducked) (1.0 / 3.0) else 1.0;
-    var scaled_wish_dir = wish_dir.scale(player.max_speed);
-    const max_speed = @min(player.max_speed, scaled_wish_dir.getlength2D()) * duck_multiplier;
+    var scaled_wish_dir = wish_dir.scale(player.maxspeed);
+    const max_speed = @min(player.maxspeed, scaled_wish_dir.getlength2D()) * duck_multiplier;
     if (player.grounded or not_aired) {
         return max_speed;
     }
@@ -56,8 +56,8 @@ pub fn getMaxSpeed(player: *const PlayerInfo, wish_dir: Vector, not_aired: bool)
 }
 
 pub fn getMaxAccel(player: *const PlayerInfo, wish_dir: Vector) f32 {
-    const accel: f32 = if (player.grounded) playerio.sv_accelerate.getFloat() else playerio.portal_sv_airaccelerate;
-    return player.surface_friction * player.tick_time * getMaxSpeed(player, wish_dir, true) * accel;
+    const accel: f32 = if (player.grounded) player.accelerate else player.airaccelerate;
+    return player.entity_friction * player.tick_time * getMaxSpeed(player, wish_dir, true) * accel;
 }
 
 pub fn createWishDir(player: *const PlayerInfo, forward_move: f32, side_move: f32) Vector {

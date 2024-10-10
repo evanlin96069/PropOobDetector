@@ -246,7 +246,7 @@ pub const Trace = extern struct {
     surface: Surface,
     hit_group: c_int,
     physics_bone: c_short,
-    ent: *anyopaque,
+    ent: ?*anyopaque,
     hitbox: c_int,
 };
 

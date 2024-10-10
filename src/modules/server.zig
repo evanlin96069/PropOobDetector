@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const CUserCmd = @import("sdk").CUserCmd;
-
 const Module = @import("Module.zig");
 
 pub var module: Module = .{

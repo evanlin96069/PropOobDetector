@@ -87,19 +87,15 @@ var cl_sidespeed: *ConVar = undefined;
 var wish_dir: Vector = undefined;
 var accel_values: std.ArrayList(f32) = undefined;
 
-fn onCreateMove(server: bool, cmd: *CUserCmd) void {
+fn onCreateMove(is_server: bool, cmd: *CUserCmd) void {
     if (!pod_strafehud.getBool()) {
         return;
     }
-    const player = playerio.getPlayer(server) orelse {
+    const player = playerio.getPlayer(is_server) orelse {
         return;
     };
 
-    const player_info = playerio.getPlayerInfo(
-        player,
-        cmd,
-        playerio.getPlayerField(server),
-    );
+    const player_info = playerio.getPlayerInfo(player, is_server);
 
     setData(&player_info, cmd);
 }
@@ -129,7 +125,7 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
         .y = @sin(rel_ang) * cmd.side_move + @cos(rel_ang) * cmd.forward_move,
     };
 
-    if (wish_dir.getlength2D() < player.max_speed) {
+    if (wish_dir.getlength2D() < player.maxspeed) {
         if (wish_dir.y > 0.0) {
             wish_dir.y /= cl_forwardspeed.getFloat();
         } else {
