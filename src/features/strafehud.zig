@@ -81,10 +81,6 @@ var pod_strafehud_lock_mode = tier1.Variable.init(.{
     .max_value = 2,
 });
 
-var cl_forwardspeed: *ConVar = undefined;
-var cl_backspeed: *ConVar = undefined;
-var cl_sidespeed: *ConVar = undefined;
-
 var wish_dir: Vector = undefined;
 var accel_values: std.ArrayList(f32) = undefined;
 
@@ -121,19 +117,20 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
         rel_ang = std.math.degreesToRadians(rel_ang);
     }
 
+    const speed = cmd.forward_move * cmd.forward_move +
+        cmd.side_move * cmd.side_move +
+        cmd.up_move * cmd.up_move;
+    if (speed > player.maxspeed * player.maxspeed) {
+        const ratio = player.maxspeed / @sqrt(speed);
+        cmd.forward_move *= ratio;
+        cmd.side_move *= ratio;
+        cmd.up_move *= ratio;
+    }
+
     wish_dir = .{
         .x = @cos(rel_ang) * cmd.side_move - @sin(rel_ang) * cmd.forward_move,
         .y = @sin(rel_ang) * cmd.side_move + @cos(rel_ang) * cmd.forward_move,
     };
-
-    if (wish_dir.getlength2D() < player.maxspeed) {
-        if (wish_dir.y > 0.0) {
-            wish_dir.y /= cl_forwardspeed.getFloat();
-        } else {
-            wish_dir.y /= cl_backspeed.getFloat();
-        }
-        wish_dir.x /= cl_sidespeed.getFloat();
-    }
 
     if (wish_dir.getlength2D() > 1.0) {
         wish_dir = wish_dir.normalize();
@@ -306,31 +303,6 @@ fn shouldLoad() bool {
 }
 
 fn init() bool {
-    const _cl_forwardspeed = tier1.icvar.findVar("cl_forwardspeed");
-    const _cl_backspeed = tier1.icvar.findVar("cl_backspeed");
-    const _cl_sidespeed = tier1.icvar.findVar("cl_sidespeed");
-
-    if (_cl_forwardspeed == null) {
-        std.log.debug("cl_forwardspeed not found", .{});
-    }
-    if (_cl_backspeed == null) {
-        std.log.debug("cl_backspeed not found", .{});
-    }
-    if (_cl_sidespeed == null) {
-        std.log.debug("cl_sidespeed not found", .{});
-    }
-
-    if (_cl_forwardspeed == null or
-        _cl_backspeed == null or
-        _cl_sidespeed == null)
-    {
-        return false;
-    }
-
-    cl_forwardspeed = _cl_forwardspeed.?;
-    cl_backspeed = _cl_backspeed.?;
-    cl_sidespeed = _cl_sidespeed.?;
-
     accel_values = std.ArrayList(f32).init(tier0.allocator);
 
     event.create_move.connect(onCreateMove);

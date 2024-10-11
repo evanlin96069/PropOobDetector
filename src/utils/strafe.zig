@@ -46,13 +46,13 @@ pub fn getGroundFrictionVelocity(player: *const PlayerInfo) Vector {
 }
 
 pub fn getMaxSpeed(player: *const PlayerInfo, wish_dir: Vector, not_aired: bool) f32 {
-    const duck_multiplier: f32 = if (player.grounded and player.ducked) (1.0 / 3.0) else 1.0;
+    const duck_multiplier: f32 = if (player.grounded and player.ducked) 0.33333333 else 1.0;
     var scaled_wish_dir = wish_dir.scale(player.maxspeed);
     const max_speed = @min(player.maxspeed, scaled_wish_dir.getlength2D()) * duck_multiplier;
     if (player.grounded or not_aired) {
         return max_speed;
     }
-    return @min(60, max_speed);
+    return @min(player.wish_speed_cap, max_speed);
 }
 
 pub fn getMaxAccel(player: *const PlayerInfo, wish_dir: Vector) f32 {

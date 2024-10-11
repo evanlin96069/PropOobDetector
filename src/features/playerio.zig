@@ -38,6 +38,8 @@ pub const PlayerInfo = struct {
     friction: f32 = 0.0,
     maxspeed: f32 = 0.0,
     stopspeed: f32 = 0.0,
+
+    wish_speed_cap: f32 = 0.0,
 };
 
 pub const PlayerField = struct {
@@ -142,6 +144,9 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
     if (is_server) {
         const previously_predicted_origin = datamap.getField(Vector, player, player_field.m_vecPreviouslyPredictedOrigin).*;
         if (!Vector.eql(position, previously_predicted_origin)) {
+            if (game_detection.doesGameLooksLikePortal()) {
+                entity_friction = 1.0;
+            }
             if (velocity.z <= 140.0) {
                 if (grounded) {
                     entity_friction = 1.0;
@@ -160,6 +165,8 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
     maxspeed = if (maxspeed > 0) @min(maxspeed, sv_maxspeed.getFloat()) else sv_maxspeed.getFloat();
     const stopspeed = sv_stopspeed.getFloat();
 
+    const wish_speed_cap = if (game_detection.doesGameLooksLikePortal()) 60 else 30;
+
     return PlayerInfo{
         .position = position,
         .angles = angles,
@@ -175,6 +182,8 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
         .friction = friction,
         .maxspeed = maxspeed,
         .stopspeed = stopspeed,
+
+        .wish_speed_cap = wish_speed_cap,
     };
 }
 
