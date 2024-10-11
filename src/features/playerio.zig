@@ -7,6 +7,7 @@ const texthud = @import("texthud.zig");
 
 const event = @import("../event.zig");
 const game_detection = @import("../utils/game_detection.zig");
+const ent_utils = @import("../utils/ent_utils.zig");
 
 const modules = @import("../modules.zig");
 const tier1 = modules.tier1;
@@ -19,6 +20,7 @@ const sdk = @import("sdk");
 const Vector = sdk.Vector;
 const QAngle = sdk.QAngle;
 const CUserCmd = sdk.CUserCmd;
+const Trace = sdk.Trace;
 
 pub const PlayerInfo = struct {
     position: Vector = .{},
@@ -38,15 +40,6 @@ pub const PlayerInfo = struct {
     stopspeed: f32 = 0.0,
 };
 
-pub fn getPlayer(is_server: bool) ?*anyopaque {
-    if (is_server) {
-        return (engine.server.pEntityOfEntIndex(1) orelse {
-            return null;
-        }).getIServerEntity();
-    }
-    return client.entlist.getClientEntity(1);
-}
-
 pub const PlayerField = struct {
     m_vecAbsOrigin: usize,
     m_vecAbsVelocity: usize,
@@ -65,6 +58,68 @@ pub fn getPlayerField(is_server: bool) *const PlayerField {
     return if (is_server) &server_player_field else &client_player_field;
 }
 
+fn traceIsPlayerGrounded(server_player: *anyopaque, position: Vector, ducked: bool, velocity: Vector) bool {
+    if (velocity.z > 140.0) {
+        return false;
+    }
+
+    var bump_origin = position;
+    if (ducked) {
+        bump_origin.z -= 36;
+    }
+    var point = bump_origin;
+    point.z -= 2;
+
+    const mins: Vector = .{
+        .x = -16,
+        .y = -16,
+        .z = if (ducked) 36 else 0,
+    };
+    const maxs: Vector = .{
+        .x = 16,
+        .y = 16,
+        .z = 72,
+    };
+
+    server.gm.setMoveData();
+    defer server.gm.unsetMoveData();
+
+    var pm: Trace = undefined;
+    const mask_playersolid = (0x1 | 0x4000 | 0x10000 | 0x2 | 0x2000000 | 0x8);
+    const collision_group_player_movement = 8;
+
+    server.gm.tracePlayerBBox(
+        &bump_origin,
+        &point,
+        &mins,
+        &maxs,
+        mask_playersolid,
+        collision_group_player_movement,
+        &pm,
+    );
+
+    if (pm.ent != null and pm.plane.normal.z >= 0.7) {
+        return true;
+    }
+
+    server.tracePlayerBBoxForGround.?(
+        &bump_origin,
+        &point,
+        &mins,
+        &maxs,
+        server_player,
+        mask_playersolid,
+        collision_group_player_movement,
+        &pm,
+    );
+
+    if (pm.ent != null and pm.plane.normal.z >= 0.7) {
+        return true;
+    }
+
+    return false;
+}
+
 pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
     const player_field: *const PlayerField = getPlayerField(is_server);
 
@@ -77,7 +132,10 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
 
     // Gournded
     const index_mask = ((1 << 11) - 1);
-    const grounded = (datamap.getField(c_long, player, player_field.m_hGroundEntity).* & index_mask) != index_mask;
+    var grounded = (datamap.getField(c_long, player, player_field.m_hGroundEntity).* & index_mask) != index_mask;
+    if (is_server and server.canTracePlayerBBox()) {
+        grounded = traceIsPlayerGrounded(player, position, ducked, velocity);
+    }
 
     // Entity friction
     var entity_friction = datamap.getField(f32, player, player_field.m_surfaceFriction).*;
@@ -140,7 +198,7 @@ const PosTextHUD = struct {
         var angles: QAngle = client.mainViewAngles().*;
         var vel: Vector = .{};
 
-        const player = getPlayer(false);
+        const player = ent_utils.getPlayer(false);
         if (player) |p| {
             vel = datamap.getField(Vector, p, client_player_field.m_vecAbsVelocity).*;
             if (cl_showpos.?.getInt() == 2) {
@@ -172,7 +230,7 @@ const PlayerioTextHUD = struct {
 
     fn onCreateMove(is_server: bool, cmd: *CUserCmd) void {
         _ = cmd;
-        const player = getPlayer(is_server) orelse return;
+        const player = ent_utils.getPlayer(is_server) orelse return;
         player_info = getPlayerInfo(player, is_server);
     }
 

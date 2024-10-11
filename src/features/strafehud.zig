@@ -18,6 +18,7 @@ const CUserCmd = sdk.CUserCmd;
 
 const event = @import("../event.zig");
 const strafe = @import("../utils/strafe.zig");
+const ent_utils = @import("../utils/ent_utils.zig");
 
 const Feature = @import("Feature.zig");
 
@@ -91,7 +92,7 @@ fn onCreateMove(is_server: bool, cmd: *CUserCmd) void {
     if (!pod_strafehud.getBool()) {
         return;
     }
-    const player = playerio.getPlayer(is_server) orelse {
+    const player = ent_utils.getPlayer(is_server) orelse {
         return;
     };
 

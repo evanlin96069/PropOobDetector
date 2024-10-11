@@ -185,6 +185,11 @@ pub fn loadValue(T: type, ptr: [*]const u8) T {
     return val.*;
 }
 
+pub fn setValue(T: type, ptr: [*]u8, value: T) void {
+    const val: *align(1) T = @ptrCast(ptr);
+    val.* = value;
+}
+
 test "Load value from memory" {
     const mem = makeHex("E9 B1 9A 78 56"); // jmp
     try testing.expectEqual(0x56789AB1, loadValue(u32, mem.ptr + 1));

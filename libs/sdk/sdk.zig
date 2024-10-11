@@ -2,6 +2,19 @@ const std = @import("std");
 
 pub const MAX_EDICTS = 1 << 11;
 
+pub const IServerUnknown = extern struct {
+    _vt: [*]*const anyopaque,
+
+    const VTIndex = struct {
+        const getRefEHandle = 2;
+    };
+
+    pub fn getRefEHandle(self: *const IServerUnknown) *const c_ulong {
+        const _getRefEHandle: *const fn (this: *const anyopaque) callconv(.Thiscall) *const c_ulong = @ptrCast(self._vt[VTIndex.getRefEHandle]);
+        return _getRefEHandle(self);
+    }
+};
+
 pub const Edict = extern struct {
     const FEdict = packed struct(c_uint) {
         changed: bool = false,
@@ -19,7 +32,7 @@ pub const Edict = extern struct {
     state_flags: FEdict,
     network_serial_number: c_int,
     networkable: *anyopaque,
-    unknown: *anyopaque,
+    unknown: *IServerUnknown,
     freetime: f32,
 
     pub fn getOffsetField(self: *Edict, comptime T: type, offset: usize) *T {
@@ -27,7 +40,7 @@ pub const Edict = extern struct {
         return @ptrCast(addr + offset);
     }
 
-    pub fn getIServerEntity(self: *Edict) ?*anyopaque {
+    pub fn getIServerEntity(self: *Edict) ?*IServerUnknown {
         if (self.state_flags.full) {
             return self.unknown;
         }
@@ -397,7 +410,7 @@ pub const CCollisionPropertyV2 = extern struct {
     }
 };
 
-pub const CUserCmd = struct {
+pub const CUserCmd = extern struct {
     vt: *anyopaque,
     command_number: c_int,
     tick_count: c_int,
@@ -413,4 +426,37 @@ pub const CUserCmd = struct {
     mouse_dx: c_short,
     mouse_dy: c_short,
     has_been_predicted: bool,
+};
+
+pub const CMoveData = extern struct {
+    flages: u8,
+
+    player_handle: c_ulong,
+
+    impluse_command: c_int,
+    view_angles: QAngle,
+    abs_view_angles: QAngle,
+    buttons: c_int,
+    old_buttons: c_int,
+    forward_move: f32,
+    side_move: f32,
+    up_move: f32,
+
+    max_speed: f32,
+    client_max_speed: f32,
+
+    velocity: Vector,
+    angles: QAngle,
+    old_angles: QAngle,
+
+    out_step_height: f32,
+    out_wish_vel: Vector,
+    out_jump_vel: Vector,
+
+    constraint_center: Vector,
+    constraint_radius: f32,
+    constraint_width: f32,
+    constraint_speed_factor: f32,
+
+    abs_origin: Vector,
 };
