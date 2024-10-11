@@ -31,6 +31,7 @@ const CGameMovement = extern struct {
     };
 
     var use_player_minsmaxs_v2 = false;
+    var use_trace_player_bbox_for_ground_v2 = false;
 
     var offset_player: usize = undefined;
     var offset_mv: usize = undefined;
@@ -134,6 +135,67 @@ const CGameMovement = extern struct {
 
         override_minmax = false;
     }
+
+    const TracePlayerBBoxForGroundV1Func = *const fn (
+        start: *const Vector,
+        end: *const Vector,
+        mins: *const Vector,
+        maxs: *const Vector,
+        player_handle: *anyopaque,
+        mask: c_uint,
+        collision_group: c_int,
+        pm: *Trace,
+    ) callconv(.C) void;
+
+    const TracePlayerBBoxForGroundV2Func = *const fn (
+        this: *anyopaque,
+        start: *const Vector,
+        end: *const Vector,
+        mask: c_uint,
+        collision_group: c_int,
+        pm: *Trace,
+    ) callconv(.Thiscall) void;
+
+    var origTracePlayerBBoxForGroundV1: ?TracePlayerBBoxForGroundV1Func = null;
+    var origTracePlayerBBoxForGroundV2: ?TracePlayerBBoxForGroundV2Func = null;
+
+    pub fn tracePlayerBBoxForGround(
+        self: *CGameMovement,
+        start: *const Vector,
+        end: *const Vector,
+        mins: *const Vector,
+        maxs: *const Vector,
+        player: *anyopaque,
+        mask: c_uint,
+        collision_group: c_int,
+        pm: *Trace,
+    ) void {
+        if (CGameMovement.use_player_minsmaxs_v2) {
+            override_minmax = true;
+            _mins = mins;
+            _maxs = maxs;
+            origTracePlayerBBoxForGroundV2.?(
+                self,
+                start,
+                end,
+                mask,
+                collision_group,
+                pm,
+            );
+            override_minmax = false;
+        } else {
+            origTracePlayerBBoxForGroundV1.?(
+                start,
+                end,
+                mins,
+                maxs,
+                player,
+                mask,
+                collision_group,
+                pm,
+            );
+        }
+    }
 };
 
 // Ignore first 5 bytes in case other plugin is hooking CheckJumpButton
@@ -160,21 +222,9 @@ const TracePlayerBBoxForGround2_patterns = zhook.mem.makePatterns(.{
     "53 8B DC 83 EC 08 83 E4 F0 83 C4 04 55 8B 6B ?? 89 6C 24 ?? 8B EC 8B 4B ?? 81 EC 98 00 00 00",
 });
 
-const TracePlayerBBoxForGroundFunc = *const fn (
-    start: *const Vector,
-    end: *const Vector,
-    mins: *const Vector,
-    maxs: *const Vector,
-    player_handle: *anyopaque,
-    mask: c_uint,
-    collision_group: c_int,
-    pm: *Trace,
-) callconv(.C) void;
-
-pub var tracePlayerBBoxForGround: ?TracePlayerBBoxForGroundFunc = null;
-
 pub fn canTracePlayerBBox() bool {
-    return tracePlayerBBoxForGround != null;
+    return CGameMovement.origTracePlayerBBoxForGroundV1 != null or
+        CGameMovement.origTracePlayerBBoxForGroundV2 != null;
 }
 
 pub var gm: *CGameMovement = undefined;
@@ -194,6 +244,7 @@ fn init() bool {
                 CGameMovement.offset_mv = 4;
 
                 CGameMovement.use_player_minsmaxs_v2 = false;
+                CGameMovement.use_trace_player_bbox_for_ground_v2 = false;
 
                 CGameMovement.VTIndex.tracePlayerBBox = 45;
             },
@@ -202,6 +253,7 @@ fn init() bool {
                 CGameMovement.offset_mv = 8;
 
                 CGameMovement.use_player_minsmaxs_v2 = false;
+                CGameMovement.use_trace_player_bbox_for_ground_v2 = false;
 
                 CGameMovement.VTIndex.tracePlayerBBox = 10;
             },
@@ -217,43 +269,58 @@ fn init() bool {
         }
 
         if (game_detection.doesGameLooksLikePortal()) {
+            CGameMovement.use_trace_player_bbox_for_ground_v2 = false;
             if (zhook.mem.scanUniquePatterns(server, TracePlayerBBoxForGround2_patterns)) |_match| {
-                tracePlayerBBoxForGround = @ptrCast(_match.ptr);
+                CGameMovement.origTracePlayerBBoxForGroundV1 = @ptrCast(_match.ptr);
             }
         } else {
             if (zhook.mem.scanUniquePatterns(server, TracePlayerBBoxForGround_patterns)) |_match| {
-                tracePlayerBBoxForGround = @ptrCast(_match.ptr);
+                switch (_match.index) {
+                    0 => { // 5135
+                        CGameMovement.use_trace_player_bbox_for_ground_v2 = false;
+                        CGameMovement.origTracePlayerBBoxForGroundV1 = @ptrCast(_match.ptr);
+                    },
+                    1 => { // 7122284
+                        CGameMovement.use_trace_player_bbox_for_ground_v2 = true;
+                        CGameMovement.origTracePlayerBBoxForGroundV2 = @ptrCast(_match.ptr);
+                    },
+                    else => unreachable,
+                }
             }
         }
 
-        if (CGameMovement.use_player_minsmaxs_v2) {
-            CGameMovement.origGetPlayerMinsV2 = core.hook_manager.hookVMT(
-                CGameMovement.GetPlayerMinsMaxsFuncV2,
-                gm._vt,
-                CGameMovement.VTIndex.getPlayerMins,
-                CGameMovement.hookedGetPlayerMinsV2,
-            ) catch null;
+        if (CGameMovement.origTracePlayerBBoxForGroundV1 != null or
+            CGameMovement.origTracePlayerBBoxForGroundV2 != null)
+        {
+            if (CGameMovement.use_player_minsmaxs_v2) {
+                CGameMovement.origGetPlayerMinsV2 = core.hook_manager.hookVMT(
+                    CGameMovement.GetPlayerMinsMaxsFuncV2,
+                    gm._vt,
+                    CGameMovement.VTIndex.getPlayerMins,
+                    CGameMovement.hookedGetPlayerMinsV2,
+                ) catch null;
 
-            CGameMovement.origGetPlayerMaxsV2 = core.hook_manager.hookVMT(
-                CGameMovement.GetPlayerMinsMaxsFuncV2,
-                gm._vt,
-                CGameMovement.VTIndex.getPlayerMaxs,
-                CGameMovement.hookedGetPlayerMaxsV2,
-            ) catch null;
-        } else {
-            CGameMovement.origGetPlayerMinsV1 = core.hook_manager.hookVMT(
-                CGameMovement.GetPlayerMinsMaxsFuncV1,
-                gm._vt,
-                CGameMovement.VTIndex.getPlayerMins,
-                CGameMovement.hookedGetPlayerMinsV1,
-            ) catch null;
+                CGameMovement.origGetPlayerMaxsV2 = core.hook_manager.hookVMT(
+                    CGameMovement.GetPlayerMinsMaxsFuncV2,
+                    gm._vt,
+                    CGameMovement.VTIndex.getPlayerMaxs,
+                    CGameMovement.hookedGetPlayerMaxsV2,
+                ) catch null;
+            } else {
+                CGameMovement.origGetPlayerMinsV1 = core.hook_manager.hookVMT(
+                    CGameMovement.GetPlayerMinsMaxsFuncV1,
+                    gm._vt,
+                    CGameMovement.VTIndex.getPlayerMins,
+                    CGameMovement.hookedGetPlayerMinsV1,
+                ) catch null;
 
-            CGameMovement.origGetPlayerMaxsV1 = core.hook_manager.hookVMT(
-                CGameMovement.GetPlayerMinsMaxsFuncV1,
-                gm._vt,
-                CGameMovement.VTIndex.getPlayerMaxs,
-                CGameMovement.hookedGetPlayerMaxsV1,
-            ) catch null;
+                CGameMovement.origGetPlayerMaxsV1 = core.hook_manager.hookVMT(
+                    CGameMovement.GetPlayerMinsMaxsFuncV1,
+                    gm._vt,
+                    CGameMovement.VTIndex.getPlayerMaxs,
+                    CGameMovement.hookedGetPlayerMaxsV1,
+                ) catch null;
+            }
         }
     } else {
         std.log.debug("Failed to find CheckJumpButton", .{});

@@ -104,7 +104,7 @@ fn traceIsPlayerGrounded(server_player: *anyopaque, position: Vector, ducked: bo
         return true;
     }
 
-    server.tracePlayerBBoxForGround.?(
+    server.gm.tracePlayerBBoxForGround(
         &bump_origin,
         &point,
         &mins,
@@ -165,7 +165,7 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
     maxspeed = if (maxspeed > 0) @min(maxspeed, sv_maxspeed.getFloat()) else sv_maxspeed.getFloat();
     const stopspeed = sv_stopspeed.getFloat();
 
-    const wish_speed_cap = if (game_detection.doesGameLooksLikePortal()) 60 else 30;
+    const wish_speed_cap: f32 = if (game_detection.doesGameLooksLikePortal()) 60 else 30;
 
     return PlayerInfo{
         .position = position,
