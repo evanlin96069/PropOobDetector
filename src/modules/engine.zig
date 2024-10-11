@@ -131,8 +131,11 @@ const SetSignonStateFunc = *const @TypeOf(hookedSetSignonState);
 var origSetSignonState: ?SetSignonStateFunc = null;
 
 const SetSignonState_patterns = zhook.mem.makePatterns(.{
+    // 5135
     "56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84 C0 75 ?? 8B",
+    // 1910503
     "55 8B EC 56 8B F1 8B ?? ?? ?? ?? ?? 8B 01 8B 50 ?? FF D2 84",
+    // 7122284
     "55 8B EC 56 8B F1 8B 0D ?? ?? ?? ?? 8B 01 8B 40 ?? FF D0 84 C0",
 });
 

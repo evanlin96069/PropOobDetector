@@ -95,7 +95,9 @@ pub var vclient: *IBaseClientDLL = undefined;
 pub var iinput: *IInput = undefined;
 
 const GetDamagePosition_patterns = zhook.mem.makePatterns(.{
+    // 5135
     "83 EC 18 E8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B 08 89 4C 24 0C 8B 50 04 6A 00 89 54 24 14 8B 40 08 6A 00 8D 4C 24 08 51 8D 54 24 18 52 89 44 24 24",
+    // 1910503
     "55 8B EC 83 EC ?? 56 8B F1 E8 ?? ?? ?? ?? E8 ?? ?? ?? ??",
 });
 

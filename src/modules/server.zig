@@ -138,27 +138,25 @@ const CGameMovement = extern struct {
 
 // Ignore first 5 bytes in case other plugin is hooking CheckJumpButton
 const CheckJumpButton_patterns = zhook.mem.makePatterns(.{
+    // 3420
+    "?? ?? ?? ?? ?? F1 8B 4E 08 80 B9 C4 09 00 00 00 74 0E 8B 76 04 83 4E 28 02 32 C0 5E 83 C4 1C C3 D9 EE D8 91 30 0D 00 00",
     // 5135
     "?? ?? ?? ?? ?? F1 8B 4E 04 80 B9 04 0A 00 00 00 74 0E 8B 76 08 83 4E 28 02 32 C0 5E 83 C4 1C C3 D9 EE D8 91 70 0D 00 00",
-    // 4104
-    "?? ?? ?? ?? ?? F1 8B 4E 08 80 B9 C4 09 00 00 00 74 0E 8B 76 04 83 4E 28 02 32 C0 5E 83 C4 1C C3 D9 EE D8 91 30 0D 00 00",
-    // steampipe
+    // 7122284
     "?? ?? ?? ?? ?? 18 56 8B F1 8B ?? 04 80 ?? ?? ?? 00 00 00 74 0E 8B ?? 08 83 ?? 28 02 32 C0 5E 8B E5 5D C3",
 });
-
-// TODO: Steampipe patterns
 
 const TracePlayerBBoxForGround_patterns = zhook.mem.makePatterns(.{
     // 5135
     "55 8B EC 83 E4 F0 81 EC 84 00 00 00 53 56 8B 75 24 8B 46 0C D9 46 2C 8B 4E 10",
-    // steampipe
+    // 7122284
     "55 8B EC 83 EC 3C 53 56 57 8B F9 8D 4D ??",
 });
 
 const TracePlayerBBoxForGround2_patterns = zhook.mem.makePatterns(.{
     // 5135
     "55 8B EC 83 E4 F0 8B 4D 18 8B 01 8B 50 08 81 EC 84 00 00 00 53 56 57 FF D2",
-    // steampipe
+    // 7122284
     "53 8B DC 83 EC 08 83 E4 F0 83 C4 04 55 8B 6B ?? 89 6C 24 ?? 8B EC 8B 4B ?? 81 EC 98 00 00 00",
 });
 
@@ -191,21 +189,21 @@ fn init() bool {
 
     if (zhook.mem.scanUniquePatterns(server, CheckJumpButton_patterns)) |match| {
         switch (match.index) {
-            0 => { // 5135
-                CGameMovement.offset_player = 4;
-                CGameMovement.offset_mv = 8;
-
-                CGameMovement.use_player_minsmaxs_v2 = false;
-
-                CGameMovement.VTIndex.tracePlayerBBox = 10;
-            },
-            1 => { // 4104
+            0 => { // 3420
                 CGameMovement.offset_player = 8;
                 CGameMovement.offset_mv = 4;
 
                 CGameMovement.use_player_minsmaxs_v2 = false;
 
                 CGameMovement.VTIndex.tracePlayerBBox = 45;
+            },
+            1 => { // 5135
+                CGameMovement.offset_player = 4;
+                CGameMovement.offset_mv = 8;
+
+                CGameMovement.use_player_minsmaxs_v2 = false;
+
+                CGameMovement.VTIndex.tracePlayerBBox = 10;
             },
             2 => { // steampipe
                 CGameMovement.offset_player = 4;
