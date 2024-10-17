@@ -28,6 +28,7 @@ pub const PlayerInfo = struct {
     velocity: Vector = .{},
     ducked: bool = false,
     grounded: bool = false,
+    water_level: u8 = 0,
     entity_friction: f32 = 0.0,
 
     tick_time: f32 = 0.015,
@@ -49,6 +50,7 @@ pub const PlayerField = struct {
     m_flMaxspeed: usize,
     m_bDucked: usize,
     m_hGroundEntity: usize,
+    m_nWaterLevel: usize,
 
     m_vecPreviouslyPredictedOrigin: usize = 0, // server-only
 };
@@ -138,6 +140,7 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
     if (is_server and server.canTracePlayerBBox()) {
         grounded = traceIsPlayerGrounded(player, position, ducked, velocity);
     }
+    const water_level = datamap.getField(u8, player, player_field.m_nWaterLevel).*;
 
     // Entity friction
     var entity_friction = datamap.getField(f32, player, player_field.m_surfaceFriction).*;
@@ -174,6 +177,7 @@ pub fn getPlayerInfo(player: *anyopaque, is_server: bool) PlayerInfo {
         .ducked = ducked,
         .grounded = grounded,
         .entity_friction = entity_friction,
+        .water_level = water_level,
 
         .tick_time = 0.015,
 
@@ -251,6 +255,7 @@ const PlayerioTextHUD = struct {
         texthud.drawTextHUD("ducked: {s}", .{if (player_info.ducked) "true" else "false"});
         texthud.drawTextHUD("grounded: {s}", .{if (player_info.grounded) "true" else "false"});
         texthud.drawTextHUD("entity friction: {d:.2}", .{player_info.entity_friction});
+        texthud.drawTextHUD("water level: {d}", .{player_info.water_level});
         texthud.drawTextHUD("accelerate: {d:.2}", .{player_info.accelerate});
         texthud.drawTextHUD("airaccelerate: {d:.2}", .{player_info.airaccelerate});
         texthud.drawTextHUD("friction: {d:.2}", .{player_info.friction});
@@ -302,6 +307,7 @@ fn init() bool {
         const m_hGroundEntity = map.get("m_hGroundEntity");
         const m_bSinglePlayerGameEnding = map.get("m_bSinglePlayerGameEnding");
         const m_vecPreviouslyPredictedOrigin = map.get("m_vecPreviouslyPredictedOrigin");
+        const m_nWaterLevel = map.get("m_nWaterLevel");
         if (m_vecAbsOrigin == null) {
             std.log.debug("Cannot find CBasePlayer::m_vecAbsOrigin offset", .{});
         }
@@ -323,6 +329,9 @@ fn init() bool {
         if (m_vecPreviouslyPredictedOrigin == null) {
             std.log.debug("Cannot find CBasePlayer::m_vecPreviouslyPredictedOrigin offset", .{});
         }
+        if (m_nWaterLevel == null) {
+            std.log.debug("Cannot find CBasePlayer::m_nWaterLevel offset", .{});
+        }
 
         if (m_vecAbsOrigin == null or
             m_vecAbsVelocity == null or
@@ -330,7 +339,8 @@ fn init() bool {
             m_bDucked == null or
             m_hGroundEntity == null or
             m_bSinglePlayerGameEnding == null or
-            m_vecPreviouslyPredictedOrigin == null)
+            m_vecPreviouslyPredictedOrigin == null or
+            m_nWaterLevel == null)
         {
             return false;
         }
@@ -342,6 +352,7 @@ fn init() bool {
         server_player_field.m_hGroundEntity = m_hGroundEntity.?;
         server_player_field.m_surfaceFriction = (m_bSinglePlayerGameEnding.? & ~@as(usize, @intCast(3))) - 4;
         server_player_field.m_vecPreviouslyPredictedOrigin = m_vecPreviouslyPredictedOrigin.?;
+        server_player_field.m_nWaterLevel = m_nWaterLevel.?;
     } else {
         std.log.debug("Cannot find CBasePlayer datamap", .{});
         return false;
@@ -354,6 +365,7 @@ fn init() bool {
         const m_bDucked = map.get("m_Local.m_bDucked");
         const m_hGroundEntity = map.get("m_hGroundEntity");
         const m_surfaceFriction = map.get("m_surfaceFriction");
+        const m_nWaterLevel = map.get("m_nWaterLevel");
         if (m_vecAbsOrigin == null) {
             std.log.debug("Cannot find C_BasePlayer::m_vecAbsOrigin offset", .{});
         }
@@ -372,13 +384,17 @@ fn init() bool {
         if (m_surfaceFriction == null) {
             std.log.debug("Cannot find C_BasePlayer::m_surfaceFriction offset", .{});
         }
+        if (m_nWaterLevel == null) {
+            std.log.debug("Cannot find CBasePlayer::m_nWaterLevel offset", .{});
+        }
 
         if (m_vecAbsOrigin == null or
             m_vecAbsVelocity == null or
             m_flMaxspeed == null or
             m_bDucked == null or
             m_hGroundEntity == null or
-            m_surfaceFriction == null)
+            m_surfaceFriction == null or
+            m_nWaterLevel == null)
         {
             return false;
         }
@@ -389,6 +405,7 @@ fn init() bool {
         client_player_field.m_bDucked = m_bDucked.?;
         client_player_field.m_hGroundEntity = m_hGroundEntity.?;
         client_player_field.m_surfaceFriction = m_surfaceFriction.?;
+        client_player_field.m_nWaterLevel = m_nWaterLevel.?;
     } else {
         std.log.debug("Cannot find C_BasePlayer datamap", .{});
         return false;

@@ -3,6 +3,8 @@ const std = @import("std");
 const playerio = @import("../features/playerio.zig");
 const PlayerInfo = playerio.PlayerInfo;
 
+const game_detection = @import("game_detection.zig");
+
 const sdk = @import("sdk");
 const Vector = sdk.Vector;
 const QAngle = sdk.QAngle;
@@ -47,16 +49,17 @@ pub fn getGroundFrictionVelocity(player: *const PlayerInfo) Vector {
 
 pub fn getMaxSpeed(player: *const PlayerInfo, wish_dir: Vector, not_aired: bool) f32 {
     const duck_multiplier: f32 = if (player.grounded and player.ducked) 0.33333333 else 1.0;
+    const water_multiplier: f32 = if (player.water_level >= 2) 0.8 else 1.0;
     var scaled_wish_dir = wish_dir.scale(player.maxspeed);
-    const max_speed = @min(player.maxspeed, scaled_wish_dir.getlength2D()) * duck_multiplier;
-    if (player.grounded or not_aired) {
+    const max_speed = @min(player.maxspeed, scaled_wish_dir.getlength2D()) * duck_multiplier * water_multiplier;
+    if (player.grounded or not_aired or player.water_level >= 2) {
         return max_speed;
     }
     return @min(player.wish_speed_cap, max_speed);
 }
 
 pub fn getMaxAccel(player: *const PlayerInfo, wish_dir: Vector) f32 {
-    const accel: f32 = if (player.grounded) player.accelerate else player.airaccelerate;
+    const accel: f32 = if (player.grounded or player.water_level >= 2) player.accelerate else player.airaccelerate;
     return player.entity_friction * player.tick_time * getMaxSpeed(player, wish_dir, true) * accel;
 }
 
@@ -77,13 +80,15 @@ pub fn createWishDir(player: *const PlayerInfo, forward_move: f32, side_move: f3
         .y = -@cos(yaw) * wish_dir.x + @sin(yaw) * wish_dir.y,
     };
 
-    const aircontrol_limit = 300;
-    if (!player.grounded and player.velocity.getlength2D() > 300) {
-        if (@abs(player.velocity.x) > aircontrol_limit * 0.5 and player.velocity.x * wish_dir.x < 0) {
-            wish_dir.x = 0;
-        }
-        if (@abs(player.velocity.y) > aircontrol_limit * 0.5 and player.velocity.y * wish_dir.y < 0) {
-            wish_dir.y = 0;
+    if (game_detection.doesGameLooksLikePortal()) {
+        const aircontrol_limit = 300;
+        if (player.water_level < 2 and !player.grounded and player.velocity.getlength2D() > aircontrol_limit) {
+            if (@abs(player.velocity.x) > aircontrol_limit * 0.5 and player.velocity.x * wish_dir.x < 0) {
+                wish_dir.x = 0;
+            }
+            if (@abs(player.velocity.y) > aircontrol_limit * 0.5 and player.velocity.y * wish_dir.y < 0) {
+                wish_dir.y = 0;
+            }
         }
     }
 
