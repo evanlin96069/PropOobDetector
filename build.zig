@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const kuroko = @import("libs/kuroko/build.zig");
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
         .default_target = std.Target.Query.parse(.{
@@ -14,7 +16,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
     lib.linkLibC();
+    kuroko.link(b, "libs/kuroko", lib, std.builtin.OptimizeMode.ReleaseFast, target);
 
     const zhook = b.addModule("zhook", .{
         .root_source_file = b.path("libs/zhook/zhook.zig"),
@@ -25,6 +29,8 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("libs/sdk/sdk.zig"),
     });
     lib.root_module.addImport("sdk", sdk);
+
+    lib.root_module.addImport("kuroko", kuroko.module(b, "libs/kuroko"));
 
     b.installArtifact(lib);
 }
