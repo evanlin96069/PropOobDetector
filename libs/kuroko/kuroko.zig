@@ -39,10 +39,10 @@ pub const KrkValue = packed struct(u64) {
     extern "c" fn krk_isInstanceOf(obj: KrkValue, class_type: *const KrkClass) c_int;
     extern "c" fn krk_callValue(callee: KrkValue, arg_count: c_int, callable_on_stack: c_int) c_int;
     extern "c" fn krk_isFalsey(value: KrkValue) c_int;
-    extern "c" fn krk_valueGetAttribute(value: KrkValue, name: [*:0]u8) KrkValue;
+    extern "c" fn krk_valueGetAttribute(value: KrkValue, name: [*:0]const u8) KrkValue;
     extern "c" fn krk_valueGetAttribute_default(value: KrkValue, name: [*:0]u8, default_val: KrkValue) KrkValue;
-    extern "c" fn krk_valueSetAttribute(owner: KrkValue, name: [*:0]u8, to: KrkValue) KrkValue;
-    extern "c" fn krk_valueDelAttribute(owner: KrkValue, name: [*:0]u8) KrkValue;
+    extern "c" fn krk_valueSetAttribute(owner: KrkValue, name: [*:0]const u8, to: KrkValue) KrkValue;
+    extern "c" fn krk_valueDelAttribute(owner: KrkValue, name: [*:0]const u8) KrkValue;
     extern "c" fn krk_unpackIterable(
         iterable: KrkValue,
         context: *anyopaque,
@@ -116,7 +116,7 @@ pub const KrkValue = packed struct(u64) {
         return krk_parse_float(string, string.len);
     }
 
-    pub inline fn stringFromFormat(fmt: [*:0]const u8, args: anytype) KrkValue {
+    pub fn stringFromFormat(fmt: [*:0]const u8, args: anytype) KrkValue {
         return @call(.auto, krk_stringFromFormat, .{fmt} ++ args);
     }
 
@@ -190,12 +190,12 @@ pub const KrkValue = packed struct(u64) {
     /// return: The requested property, or None with an `AttributeError`
     /// exception set in the current thread if the attribute was
     /// not found.
-    pub inline fn getAttribute(value: KrkValue, name: [*:0]u8) KrkValue {
+    pub inline fn getAttribute(value: KrkValue, name: [*:0]const u8) KrkValue {
         return krk_valueGetAttribute(value, name);
     }
 
     /// See `KrkValue.getAttribute`
-    pub inline fn getAttributeDefault(value: KrkValue, name: [*:0]u8, default_val: KrkValue) KrkValue {
+    pub inline fn getAttributeDefault(value: KrkValue, name: [*:0]const u8, default_val: KrkValue) KrkValue {
         return krk_valueGetAttribute_default(value, name, default_val);
     }
 
@@ -214,7 +214,7 @@ pub const KrkValue = packed struct(u64) {
     /// return: The set value, or None with an `AttributeError`
     /// exception set in the current thread if the object can
     /// not have a property set.
-    pub inline fn setAttribute(owner: KrkValue, name: [*:0]u8, to: KrkValue) KrkValue {
+    pub inline fn setAttribute(owner: KrkValue, name: [*:0]const u8, to: KrkValue) KrkValue {
         return krk_valueSetAttribute(owner, name, to);
     }
 
@@ -228,7 +228,7 @@ pub const KrkValue = packed struct(u64) {
     ///
     /// - `owner` The owner of the property to delete.
     /// - `name` C-string of the property name to delete.
-    pub inline fn delAttribute(owner: KrkValue, name: [*:0]u8) KrkValue {
+    pub inline fn delAttribute(owner: KrkValue, name: [*:0]const u8) KrkValue {
         return krk_valueDelAttribute(owner, name);
     }
 
@@ -2324,7 +2324,7 @@ pub const StringBuilder = extern struct {
 
     /// Append a formatted string to the end of a string builder.
     /// return: true on success, false on failure.
-    pub inline fn pushStringFormat(sb: *StringBuilder, fmt: [*:0]const u8, args: anytype) bool {
+    pub fn pushStringFormat(sb: *StringBuilder, fmt: [*:0]const u8, args: anytype) bool {
         return @call(.auto, krk_pushStringBuilderFormat, .{ sb, fmt } ++ args) == 1;
     }
 
