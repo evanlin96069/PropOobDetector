@@ -11,6 +11,9 @@ const engine = modules.engine;
 
 const VM = kuroko.KrkVM;
 const KrkValue = kuroko.KrkValue;
+const KrkString = kuroko.KrkString;
+const KrkInstance = kuroko.KrkInstance;
+const StringBuilder = kuroko.StringBuilder;
 
 pub var feature: Feature = .{
     .name = "kuroko",
@@ -30,7 +33,7 @@ var krk_interpret = tier1.ConCommand.init(.{
 });
 
 fn printResult(result: KrkValue) void {
-    var sb: kuroko.StringBuilder = std.mem.zeroes(kuroko.StringBuilder);
+    var sb: StringBuilder = std.mem.zeroes(StringBuilder);
     if (!sb.pushStringFormat(" => %R", .{result.value})) {
         VM.dumpTraceback();
     } else {
@@ -103,16 +106,74 @@ fn resetKrkVM() void {
 
 fn initKrkVM() void {
     VM.init(.{});
-    _ = kuroko.KrkVM.startModule("__main__");
+
+    const module = VKurokoModule.createModule();
+    VM.getInstance().modules.attachNamedValue("vkuroko", module.asValue());
+    VM.resetStack();
+
+    _ = VM.startModule("__main__");
 
     VM.push(VM.getInstance().system.asValue().getAttribute("module_paths"));
     VM.push(VM.peek(0).getAttribute("insert"));
     VM.push(KrkValue.intValue(0));
 
-    VM.push(kuroko.KrkString.copyString(krk_path).asValue());
+    VM.push(KrkString.copyString(krk_path).asValue());
     _ = VM.callStack(2); // module_paths.inset(0, krk_path)
     _ = VM.pop();
 }
+
+const VKurokoModule = struct {
+    pub fn createModule() *KrkInstance {
+        const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
+        VM.push(module.asValue());
+        module.fields.attachNamedValue("__name__", KrkString.copyString("vkuroko").asValue());
+        module.fields.attachNamedValue("__file__", KrkValue.noneValue());
+
+        module.setDoc("@brief Source Engine module.");
+
+        module.fields.attachNamedValue("console", KrkConsole.createModule().asValue());
+
+        return module;
+    }
+};
+
+const KrkConsole = struct {
+    pub fn createModule() *KrkInstance {
+        const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
+        VM.push(module.asValue());
+        module.fields.attachNamedValue("__name__", KrkString.copyString("console").asValue());
+        module.fields.attachNamedValue("__file__", KrkValue.noneValue());
+
+        module.setDoc("@brief Console operations.");
+        module.bindFunction("exec", exec).setDoc(
+            \\@brief Runs a console command.
+            \\@arguments command
+            \\
+            \\Runs @p command using `IVEngineClient::ClientCmd`.
+        );
+
+        return module;
+    }
+
+    fn exec(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+        var cmd: [*:0]const u8 = undefined;
+        if (!kuroko.parseArgs(
+            "exec",
+            argc,
+            argv,
+            has_kw,
+            "s",
+            &.{"command"},
+            .{&cmd},
+        )) {
+            return KrkValue.noneValue();
+        }
+
+        engine.client.clientCmd(cmd);
+
+        return KrkValue.noneValue();
+    }
+};
 
 fn shouldLoad() bool {
     return true;

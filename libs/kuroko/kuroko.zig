@@ -325,7 +325,7 @@ pub const KrkValue = packed struct(u64) {
     }
 
     pub inline fn asObject(v: KrkValue) *KrkObj {
-        return @ptrFromInt(v.value & mask_low);
+        return @ptrFromInt(@as(usize, @intCast(v.value & mask_low)));
     }
 
     pub inline fn asFloat(v: KrkValue) f64 {
@@ -1190,8 +1190,8 @@ pub const KrkClass = extern struct {
     ///
     /// - `class` Class pointer for the exception type, eg. `krk_vm.exceptions->valueError`
     /// - `fmt` Format string.
-    pub inline fn runtimeError(class: *KrkClass, fmt: [*:0]const u8, args: anytype) void {
-        _ = @call(.auto, krk_runtimeError, .{ class, fmt } ++ args);
+    pub fn runtimeError(class: *KrkClass, fmt: [*:0]const u8, args: anytype) KrkValue {
+        return @call(.auto, krk_runtimeError, .{ class, fmt } ++ args);
     }
 
     /// See `KrkTable.defineNative`
@@ -1321,7 +1321,7 @@ pub const KrkBoundMethod = extern struct {
 
 pub const KrkNativeFn = ?*const fn (
     arg_count: c_int,
-    args: *const KrkValue,
+    args: [*]const KrkValue,
     has_kwargs: c_int,
 ) callconv(.C) KrkValue;
 
@@ -2100,7 +2100,7 @@ pub const KrkVM = struct {
     ///
     /// return: Pointer to current thread's thread state.
     pub inline fn getCurrentThread() *KrkThreadState {
-        krk_getCurrentThread();
+        return krk_getCurrentThread();
     }
 
     /// Continue VM execution until the next exit trigger.
@@ -2362,3 +2362,28 @@ pub const StringBuilder = extern struct {
         return sb.bytes[0..sb.length];
     }
 };
+
+extern fn krk_parseArgs_impl(
+    method_name: [*:0]const u8,
+    argc: c_int,
+    argv: [*]const KrkValue,
+    has_kw: c_int,
+    format: [*:0]const u8,
+    names: [*]const [*:0]const u8,
+    ...,
+) c_int;
+
+/// Parse arguments to a function while accepting keyword arguments.
+///
+/// return: true on success, false on failure with an exception set.
+pub fn parseArgs(
+    method_name: [*:0]const u8,
+    argc: c_int,
+    argv: [*]const KrkValue,
+    has_kw: c_int,
+    format: [*:0]const u8,
+    names: [*]const [*:0]const u8,
+    values: anytype,
+) bool {
+    return @call(.auto, krk_parseArgs_impl, .{ method_name, argc, argv, has_kw, format, names } ++ values) == 1;
+}
