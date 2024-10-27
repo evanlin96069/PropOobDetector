@@ -13,13 +13,14 @@ pub fn link(
     optimize: std.builtin.OptimizeMode,
     target: std.Build.ResolvedTarget,
 ) void {
+    const src_path = b.fmt("{s}/src", .{dir});
+
     const lib = b.addStaticLibrary(.{
         .name = "kuroko",
         .target = target,
         .optimize = optimize,
+        .root_source_file = b.path(b.fmt("{s}/root.zig", .{src_path})),
     });
-
-    const src_path = b.fmt("{s}/src", .{dir});
 
     lib.addIncludePath(b.path(src_path));
 

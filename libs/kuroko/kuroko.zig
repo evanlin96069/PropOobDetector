@@ -2387,3 +2387,10 @@ pub fn parseArgs(
 ) bool {
     return @call(.auto, krk_parseArgs_impl, .{ method_name, argc, argv, has_kw, format, names } ++ values) == 1;
 }
+
+extern fn krk_exec_module(src: [*:0]const u8, module_name: [*:0]const u8) c_int;
+
+/// Compile and execute a source code input as builtin module.
+pub fn execModule(src: [*:0]const u8, module_name: [*:0]const u8) bool {
+    return krk_exec_module(src, module_name) == 1;
+}
