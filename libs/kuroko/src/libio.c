@@ -1,11 +1,10 @@
 #include "libio.h"
-#include "kuroko/value.h"
 #include <kuroko/vm.h>
 
 #include <stdarg.h>
 #include <string.h>
 
-#define MAX_OUTPUT_LEN 1024
+#define MAX_OUTPUT_LEN 2048
 
 int krk_fprintf(FILE* stream, const char* fmt, ...) {
     char buffer[MAX_OUTPUT_LEN];
