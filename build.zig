@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const lib = b.addSharedLibrary(.{
-        .name = "pod",
+        .name = "vkuroko",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,

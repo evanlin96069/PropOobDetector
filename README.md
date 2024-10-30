@@ -1,15 +1,16 @@
-# PropOobDetector
+# vkuroko
 
-A Source Engine plugin that detects out-of-bounds props.
+A Source Engine plugin that integrates [Kuroko](https://github.com/kuroko-lang/kuroko/) (a dialect of Python).
 
-Tested on Portal 3420, Portal 4104, Portal 5135, and latest Portal Steampipe version.
+More bindings and TAS support are still being developed.
 
-## Command
-`pod_print_oob_ents`
-- Prints entities that are oob
-
-`pod_hud_oob_ents`
-- Shows entities that are oob
+## Supported Games
+- Portal (3420)
+- Portal (4104)
+- Portal (5135)
+- Portal (latest)
+- Half-Life 2 (5135)
+- Half-Life 2 (latest)
 
 ## Build
 Only Windows build.

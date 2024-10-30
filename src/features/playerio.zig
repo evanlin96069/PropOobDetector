@@ -232,8 +232,8 @@ const PosTextHUD = struct {
     }
 };
 
-var pod_hud_vars = tier1.Variable.init(.{
-    .name = "pod_hud_vars",
+var vkrk_hud_vars = tier1.Variable.init(.{
+    .name = "vkrk_hud_vars",
     .help_string = "Show player movement variables.",
     .default_value = "0",
 });
@@ -248,7 +248,7 @@ const PlayerioTextHUD = struct {
     }
 
     fn shouldDraw() bool {
-        return pod_hud_vars.getBool();
+        return vkrk_hud_vars.getBool();
     }
 
     fn paint() void {
@@ -266,7 +266,7 @@ const PlayerioTextHUD = struct {
     fn register() void {
         if (event.create_move.works) {
             event.create_move.connect(onCreateMove);
-            pod_hud_vars.register();
+            vkrk_hud_vars.register();
             texthud.addHUDElement(.{
                 .shouldDraw = shouldDraw,
                 .paint = paint,

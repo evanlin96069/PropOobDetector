@@ -37,8 +37,8 @@ const EntityInfo = struct {
 
 var oob_ents: std.ArrayList(EntityInfo) = undefined;
 
-var pod_print_oob_ents = tier1.ConCommand.init(.{
-    .name = "pod_print_oob_ents",
+var vkrk_print_oob_ents = tier1.ConCommand.init(.{
+    .name = "vkrk_print_oob_ents",
     .help_string = "Prints entities that are oob.",
     .command_callback = print_oob_ents_Fn,
 });
@@ -58,8 +58,8 @@ fn print_oob_ents_Fn(args: *const tier1.CCommand) callconv(.C) void {
     }
 }
 
-var pod_hud_oob_ents = tier1.Variable.init(.{
-    .name = "pod_hud_oob_ents",
+var vkrk_hud_oob_ents = tier1.Variable.init(.{
+    .name = "vkrk_hud_oob_ents",
     .help_string = "Shows entities that are oob.",
     .default_value = "0",
 });
@@ -171,7 +171,7 @@ fn onTick() void {
 
 const OobentTextHUD = struct {
     fn shouldDraw() bool {
-        return pod_hud_oob_ents.getBool();
+        return vkrk_hud_oob_ents.getBool();
     }
 
     fn paint() void {
@@ -196,7 +196,7 @@ const OobentTextHUD = struct {
     }
 
     fn register() void {
-        pod_hud_oob_ents.register();
+        vkrk_hud_oob_ents.register();
         texthud.addHUDElement(.{
             .shouldDraw = shouldDraw,
             .paint = paint,
@@ -222,7 +222,7 @@ fn init() bool {
 
     oob_ents = std.ArrayList(EntityInfo).init(tier0.allocator);
 
-    pod_print_oob_ents.register();
+    vkrk_print_oob_ents.register();
 
     OobentTextHUD.register();
 

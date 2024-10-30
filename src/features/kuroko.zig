@@ -26,10 +26,10 @@ const krk_from_file = "<console>";
 
 var krk_path: [*:0]const u8 = undefined;
 
-var krk_interpret = tier1.ConCommand.init(.{
-    .name = "krk_interpret",
+var vkrk_interpret = tier1.ConCommand.init(.{
+    .name = "vkrk_interpret",
     .help_string = "Runs the text as a Kuroko script.",
-    .command_callback = krk_interpret_Fn,
+    .command_callback = vkrk_interpret_Fn,
 });
 
 fn printResult(result: KrkValue) void {
@@ -42,9 +42,9 @@ fn printResult(result: KrkValue) void {
     sb.discard();
 }
 
-fn krk_interpret_Fn(args: *const tier1.CCommand) callconv(.C) void {
+fn vkrk_interpret_Fn(args: *const tier1.CCommand) callconv(.C) void {
     if (args.argc != 2) {
-        std.log.info("krk_interpret <code>", .{});
+        std.log.info("vkrk_interpret <code>", .{});
         return;
     }
 
@@ -56,15 +56,15 @@ fn krk_interpret_Fn(args: *const tier1.CCommand) callconv(.C) void {
     VM.resetStack();
 }
 
-var krk_run = tier1.ConCommand.init(.{
-    .name = "krk_run",
+var vkrk_run = tier1.ConCommand.init(.{
+    .name = "vkrk_run",
     .help_string = "Runs a Kuroko script file.",
-    .command_callback = krk_run_Fn,
+    .command_callback = vkrk_run_Fn,
 });
 
-fn krk_run_Fn(args: *const tier1.CCommand) callconv(.C) void {
+fn vkrk_run_Fn(args: *const tier1.CCommand) callconv(.C) void {
     if (args.argc != 2 or args.args(1).len == 0) {
-        std.log.info("krk_run <file>", .{});
+        std.log.info("vkrk_run <file>", .{});
         return;
     }
 
@@ -89,7 +89,7 @@ fn krk_run_Fn(args: *const tier1.CCommand) callconv(.C) void {
 }
 
 var krk_reset = tier1.ConCommand.init(.{
-    .name = "krk_reset",
+    .name = "vkrk_reset",
     .help_string = "Resets the Kuroko VM.",
     .command_callback = krk_reset_Fn,
 });
@@ -196,8 +196,8 @@ fn init() bool {
 
     initKrkVM();
 
-    krk_interpret.register();
-    krk_run.register();
+    vkrk_interpret.register();
+    vkrk_run.register();
     krk_reset.register();
 
     return true;

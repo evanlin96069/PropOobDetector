@@ -51,7 +51,7 @@ fn pause(_: *anyopaque) callconv(.Thiscall) void {}
 fn unpause(_: *anyopaque) callconv(.Thiscall) void {}
 
 fn getPluginDescription(_: *anyopaque) callconv(.Thiscall) [*:0]const u8 {
-    return "Prop Oob Detector - evanlin96069";
+    return "vkuroko - evanlin96069";
 }
 
 fn levelInit(_: *anyopaque, map_name: [*:0]const u8) callconv(.Thiscall) void {

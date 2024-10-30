@@ -29,47 +29,47 @@ pub var feature: Feature = .{
     .deinit = deinit,
 };
 
-var pod_strafehud = tier1.Variable.init(.{
-    .name = "pod_strafehud",
+var vkrk_strafehud = tier1.Variable.init(.{
+    .name = "vkrk_strafehud",
     .help_string = "Draw the strafe HUD.",
     .default_value = "0",
 });
 
-var pod_strafehud_x = tier1.Variable.init(.{
-    .name = "pod_strafehud_x",
+var vkrk_strafehud_x = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_x",
     .help_string = "The X position for the strafe HUD.",
     .default_value = "-10",
 });
 
-var pod_strafehud_y = tier1.Variable.init(.{
-    .name = "pod_strafehud_y",
+var vkrk_strafehud_y = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_y",
     .help_string = "The Y position for the strafe HUD.",
     .default_value = "-10",
 });
 
-var pod_strafehud_size = tier1.Variable.init(.{
-    .name = "pod_strafehud_size",
+var vkrk_strafehud_size = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_size",
     .help_string = "The width and height of the strafe HUD.",
     .default_value = "256",
     .min_value = 1,
 });
 
-var pod_strafehud_detial_scale = tier1.Variable.init(.{
-    .name = "pod_strafehud_detial_scale",
+var vkrk_strafehud_detial_scale = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_detial_scale",
     .help_string = "The detail scale for the lines of the strafe HUD.",
     .default_value = "4",
     .min_value = 0,
     .max_value = 64,
 });
 
-var pod_strafehud_match_accel_scale = tier1.Variable.init(.{
-    .name = "pod_strafehud_match_accel_scale",
+var vkrk_strafehud_match_accel_scale = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_match_accel_scale",
     .help_string = "Match the scales for minimum and maximum deceleration.",
     .default_value = "0",
 });
 
-var pod_strafehud_lock_mode = tier1.Variable.init(.{
-    .name = "pod_strafehud_lock_mode",
+var vkrk_strafehud_lock_mode = tier1.Variable.init(.{
+    .name = "vkrk_strafehud_lock_mode",
     .help_string =
     \\Lock mode used by the strafe HUD:
     \\0 - view direction
@@ -85,7 +85,7 @@ var wish_dir: Vector = undefined;
 var accel_values: std.ArrayList(f32) = undefined;
 
 fn onCreateMove(is_server: bool, cmd: *CUserCmd) void {
-    if (!pod_strafehud.getBool()) {
+    if (!vkrk_strafehud.getBool()) {
         return;
     }
     const player = ent_utils.getPlayer(is_server) orelse {
@@ -105,7 +105,7 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
     var smallest_accel: f32 = 0.0;
 
     var rel_ang: f32 = 0.0;
-    const lock_mode = pod_strafehud_lock_mode.getInt();
+    const lock_mode = vkrk_strafehud_lock_mode.getInt();
     if (lock_mode > 0) {
         const vel_ang = strafe.getVelocityAngles(player).x;
         const look_ang = player.angles.y;
@@ -136,7 +136,7 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
         wish_dir = wish_dir.normalize();
     }
 
-    const detail: usize = @intFromFloat(@as(f32, @floatFromInt(pod_strafehud_size.getInt())) * pod_strafehud_detial_scale.getFloat());
+    const detail: usize = @intFromFloat(@as(f32, @floatFromInt(vkrk_strafehud_size.getInt())) * vkrk_strafehud_detial_scale.getFloat());
     accel_values.resize(detail) catch return;
 
     var i: usize = 0;
@@ -154,7 +154,7 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
         }
     }
 
-    if (pod_strafehud_match_accel_scale.getBool()) {
+    if (vkrk_strafehud_match_accel_scale.getBool()) {
         const max: f32 = @max(biggest_accel, @abs(smallest_accel));
         smallest_accel = -max;
         biggest_accel = max;
@@ -171,15 +171,15 @@ fn setData(player: *const PlayerInfo, cmd: *CUserCmd) void {
 }
 
 fn onPaint() void {
-    if (!pod_strafehud.getBool() or !engine.client.isInGame()) {
+    if (!vkrk_strafehud.getBool() or !engine.client.isInGame()) {
         return;
     }
 
     const screen = vgui.imatsystem.getScreenSize();
     const pad = 5;
-    var size = pod_strafehud_size.getInt();
-    var x: i32 = pod_strafehud_x.getInt();
-    var y: i32 = pod_strafehud_y.getInt();
+    var size = vkrk_strafehud_size.getInt();
+    var x: i32 = vkrk_strafehud_x.getInt();
+    var y: i32 = vkrk_strafehud_y.getInt();
 
     if (x < 0) {
         x += screen.wide - size;
@@ -308,13 +308,13 @@ fn init() bool {
     event.create_move.connect(onCreateMove);
     event.paint.connect(onPaint);
 
-    pod_strafehud.register();
-    pod_strafehud_x.register();
-    pod_strafehud_y.register();
-    pod_strafehud_size.register();
-    pod_strafehud_detial_scale.register();
-    pod_strafehud_match_accel_scale.register();
-    pod_strafehud_lock_mode.register();
+    vkrk_strafehud.register();
+    vkrk_strafehud_x.register();
+    vkrk_strafehud_y.register();
+    vkrk_strafehud_size.register();
+    vkrk_strafehud_detial_scale.register();
+    vkrk_strafehud_match_accel_scale.register();
+    vkrk_strafehud_lock_mode.register();
 
     return true;
 }

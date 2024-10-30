@@ -20,8 +20,8 @@ pub var feature: Feature = .{
     .deinit = deinit,
 };
 
-var pod_hud_debug = tier1.Variable.init(.{
-    .name = "pod_hud_debug",
+var vkrk_hud_debug = tier1.Variable.init(.{
+    .name = "vkrk_hud_debug",
     .flags = .{
         .hidden = true,
     },
@@ -29,8 +29,8 @@ var pod_hud_debug = tier1.Variable.init(.{
     .default_value = "0",
 });
 
-var pod_datamap_print = tier1.ConCommand.init(.{
-    .name = "pod_datamap_print",
+var vkrk_datamap_print = tier1.ConCommand.init(.{
+    .name = "vkrk_datamap_print",
     .flags = .{
         .hidden = true,
     },
@@ -54,8 +54,8 @@ fn datamap_print_Fn(args: *const tier1.CCommand) callconv(.C) void {
     }
 }
 
-var pod_datamap_walk = tier1.ConCommand.init(.{
-    .name = "pod_datamap_walk",
+var vkrk_datamap_walk = tier1.ConCommand.init(.{
+    .name = "vkrk_datamap_walk",
     .flags = .{
         .hidden = true,
     },
@@ -65,7 +65,7 @@ var pod_datamap_walk = tier1.ConCommand.init(.{
 
 fn datamap_walk_Fn(args: *const tier1.CCommand) callconv(.C) void {
     if (args.argc != 2) {
-        std.log.info("Usage: pod_datamap_walk <class name>", .{});
+        std.log.info("Usage: vkrk_datamap_walk <class name>", .{});
         return;
     }
 
@@ -91,7 +91,7 @@ fn shouldLoad() bool {
 }
 
 fn onPaint() void {
-    if (pod_hud_debug.getBool()) {
+    if (vkrk_hud_debug.getBool()) {
         const screen = vgui.imatsystem.getScreenSize();
         const cols = 8;
         const rows = 8;
@@ -128,10 +128,10 @@ fn onSessionStart() void {
 }
 
 fn init() bool {
-    pod_datamap_print.register();
-    pod_datamap_walk.register();
+    vkrk_datamap_print.register();
+    vkrk_datamap_walk.register();
 
-    pod_hud_debug.register();
+    vkrk_hud_debug.register();
 
     event.session_start.connect(onSessionStart);
     event.paint.connect(onPaint);

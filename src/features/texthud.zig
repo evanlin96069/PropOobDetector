@@ -20,14 +20,14 @@ pub var feature: Feature = .{
     .deinit = deinit,
 };
 
-var pod_hud_x = tier1.Variable.init(.{
-    .name = "pod_hud_x",
+var vkrk_hud_x = tier1.Variable.init(.{
+    .name = "vkrk_hud_x",
     .help_string = "The X position for the text HUD.",
     .default_value = "-300",
 });
 
-var pod_hud_y = tier1.Variable.init(.{
-    .name = "pod_hud_y",
+var vkrk_hud_y = tier1.Variable.init(.{
+    .name = "vkrk_hud_y",
     .help_string = "The Y position for the text HUD.",
     .default_value = "0",
 });
@@ -184,8 +184,8 @@ fn onPaint() void {
 
     const screen = vgui.imatsystem.getScreenSize();
 
-    x = pod_hud_x.getInt();
-    y = pod_hud_y.getInt();
+    x = vkrk_hud_x.getInt();
+    y = vkrk_hud_y.getInt();
 
     if (x < 0) {
         x += screen.wide;
@@ -215,8 +215,8 @@ fn init() bool {
 
     event.paint.connect(onPaint);
 
-    pod_hud_x.register();
-    pod_hud_y.register();
+    vkrk_hud_x.register();
+    vkrk_hud_y.register();
 
     FPSTextHUD.register();
 
