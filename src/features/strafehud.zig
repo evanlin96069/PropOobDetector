@@ -57,7 +57,7 @@ var vkrk_strafehud_size = tier1.Variable.init(.{
 var vkrk_strafehud_detial_scale = tier1.Variable.init(.{
     .name = "vkrk_strafehud_detial_scale",
     .help_string = "The detail scale for the lines of the strafe HUD.",
-    .default_value = "4",
+    .default_value = "1",
     .min_value = 0,
     .max_value = 64,
 });
