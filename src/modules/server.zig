@@ -170,7 +170,7 @@ const CGameMovement = extern struct {
         collision_group: c_int,
         pm: *Trace,
     ) void {
-        if (CGameMovement.use_player_minsmaxs_v2) {
+        if (CGameMovement.use_trace_player_bbox_for_ground_v2) {
             override_minmax = true;
             _mins = mins;
             _maxs = maxs;
