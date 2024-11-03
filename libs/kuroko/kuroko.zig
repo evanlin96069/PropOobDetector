@@ -275,7 +275,7 @@ pub const KrkValue = packed struct(u64) {
 
     pub inline fn boolValue(v: bool) KrkValue {
         return .{
-            .value = ((if (v) 1 else 0) & mask_low) | mask_boolean,
+            .value = (@intFromBool(v) & mask_low) | mask_boolean,
         };
     }
 
