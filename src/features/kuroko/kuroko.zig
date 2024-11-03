@@ -1,19 +1,20 @@
 const std = @import("std");
 
-const kuroko = @import("kuroko");
+const Feature = @import("../Feature.zig");
 
-const Feature = @import("Feature.zig");
-
-const modules = @import("../modules.zig");
+const modules = @import("../../modules.zig");
 const tier0 = modules.tier0;
 const tier1 = modules.tier1;
 const engine = modules.engine;
 
+const kuroko = @import("kuroko");
 const VM = kuroko.KrkVM;
 const KrkValue = kuroko.KrkValue;
 const KrkString = kuroko.KrkString;
 const KrkInstance = kuroko.KrkInstance;
 const StringBuilder = kuroko.StringBuilder;
+
+const VKrkConsole = @import("modules/VKrkConsole.zig");
 
 pub var feature: Feature = .{
     .name = "kuroko",
@@ -107,7 +108,7 @@ fn resetKrkVM() void {
 fn initKrkVM() void {
     VM.init(.{});
 
-    const module = VKurokoModule.createModule();
+    const module = VKrkModule.createModule();
     VM.getInstance().modules.attachNamedValue("vkuroko", module.asValue());
     VM.resetStack();
 
@@ -122,7 +123,7 @@ fn initKrkVM() void {
     _ = VM.pop();
 }
 
-const VKurokoModule = struct {
+const VKrkModule = struct {
     pub fn createModule() *KrkInstance {
         const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
         VM.push(module.asValue());
@@ -131,47 +132,9 @@ const VKurokoModule = struct {
 
         module.setDoc("@brief Source Engine module.");
 
-        module.fields.attachNamedValue("console", KrkConsole.createModule().asValue());
+        module.fields.attachNamedValue("console", VKrkConsole.createModule().asValue());
 
         return module;
-    }
-};
-
-const KrkConsole = struct {
-    pub fn createModule() *KrkInstance {
-        const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
-        VM.push(module.asValue());
-        module.fields.attachNamedValue("__name__", KrkString.copyString("console").asValue());
-        module.fields.attachNamedValue("__file__", KrkValue.noneValue());
-
-        module.setDoc("@brief Console operations.");
-        module.bindFunction("exec", exec).setDoc(
-            \\@brief Runs a console command.
-            \\@arguments command
-            \\
-            \\Runs @p command using `IVEngineClient::ClientCmd`.
-        );
-
-        return module;
-    }
-
-    fn exec(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
-        var cmd: [*:0]const u8 = undefined;
-        if (!kuroko.parseArgs(
-            "exec",
-            argc,
-            argv,
-            has_kw,
-            "s",
-            &.{"command"},
-            .{&cmd},
-        )) {
-            return KrkValue.noneValue();
-        }
-
-        engine.client.clientCmd(cmd);
-
-        return KrkValue.noneValue();
     }
 };
 
