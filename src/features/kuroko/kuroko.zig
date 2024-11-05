@@ -14,7 +14,8 @@ const KrkString = kuroko.KrkString;
 const KrkInstance = kuroko.KrkInstance;
 const StringBuilder = kuroko.StringBuilder;
 
-const VKrkConsole = @import("modules/VKrkConsole.zig");
+const vkrk_console = @import("modules/vkrk_console.zig");
+const vkrk_game = @import("modules/vkrk_game.zig");
 
 pub var feature: Feature = .{
     .name = "kuroko",
@@ -132,7 +133,8 @@ const VKrkModule = struct {
 
         module.setDoc("@brief Source Engine module.");
 
-        module.fields.attachNamedValue("console", VKrkConsole.createModule().asValue());
+        module.fields.attachNamedValue("console", vkrk_console.createModule().asValue());
+        module.fields.attachNamedValue("game", vkrk_game.createModule().asValue());
 
         return module;
     }
