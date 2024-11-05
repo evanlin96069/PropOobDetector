@@ -284,30 +284,3 @@ class xraydict:
         return [pair[0] for pair in self.items()]
     def __iter__():
         return self.keys().__iter__()
-
-class OrderedDict(dict):
-    def __init__(self, *args, **kwargs):
-        self._order = []
-        super().__init__(*args, **kwargs)
-
-    def __setitem__(self, key, value):
-        if key not in self:
-            self._order.append(key)
-        super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        self._order.remove(key)
-        super().__delitem__(key)
-
-    def __iter__(self):
-        return __iter__()
-
-    def __str__(self):
-        return "{" + ", ".join(f"{key}: {self[key]}" for key in self._order) + "}"
-
-    def clear(self):
-        self._order.clear()
-        super().clear()
-
-    def items(self):
-        return [(key, self[key]) for key in self._order]
