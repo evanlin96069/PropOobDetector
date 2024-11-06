@@ -27,6 +27,11 @@ pub fn createModule() *KrkInstance {
         \\@brief Does game looks like Portal?
     );
 
+    module.bindFunction("get_build_number", get_build_number).setDoc(
+        \\@brief Gets the build number
+        \\@return Build number, -1 if build number not available
+    );
+
     return module;
 }
 
@@ -34,7 +39,7 @@ fn get_game_dir(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C
     _ = has_kw;
     _ = argv;
     if (argc != 0) {
-        return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc});
+        return VM.getInstance().exceptions.argumentError.runtimeError("get_game_dir() takes no arguments (%d given)", .{argc});
     }
 
     return KrkString.copyString(engine.client.getGameDirectory()).asValue();
@@ -44,8 +49,18 @@ fn is_portal(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) K
     _ = has_kw;
     _ = argv;
     if (argc != 0) {
-        return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc});
+        return VM.getInstance().exceptions.argumentError.runtimeError("is_portal() takes no arguments (%d given)", .{argc});
     }
 
     return KrkValue.boolValue(game_detection.doesGameLooksLikePortal());
+}
+
+fn get_build_number(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+    _ = has_kw;
+    _ = argv;
+    if (argc != 0) {
+        return VM.getInstance().exceptions.argumentError.runtimeError("get_build_number() takes no arguments (%d given)", .{argc});
+    }
+
+    return KrkValue.intValue(game_detection.getBuildNumber());
 }
