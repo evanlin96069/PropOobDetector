@@ -8,7 +8,7 @@ const Hook = @This();
 
 const windows = @cImport({
     @cDefine("WIN32_LEAN_AND_MEAN", "1");
-    @cInclude("Windows.h");
+    @cInclude("windows.h");
 });
 
 const HookType = enum {
