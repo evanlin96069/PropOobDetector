@@ -29,6 +29,25 @@ var vkrk_hud_debug = tier1.Variable.init(.{
     .default_value = "0",
 });
 
+var vkrk_cmd_debug = tier1.ConCommand.init(.{
+    .name = "vkrk_cmd_debug",
+    .flags = .{
+        .hidden = true,
+    },
+    .help_string = "For debuging CCommand.",
+    .command_callback = cmd_debug_Fn,
+});
+
+fn cmd_debug_Fn(args: *const tier1.CCommand) callconv(.C) void {
+    std.log.info("argc = {d}", .{args.argc});
+    std.log.info("argv_0_size = {d}", .{args.argv_0_size});
+    std.log.info("args_buffer = \"{s}\"", .{args.args_buffer});
+    var i: u32 = 0;
+    while (i < args.argc) : (i += 1) {
+        std.log.info("argv[{d}] = \"{s}\"", .{ i, args.argv[i] });
+    }
+}
+
 var vkrk_datamap_print = tier1.ConCommand.init(.{
     .name = "vkrk_datamap_print",
     .flags = .{
@@ -132,6 +151,7 @@ fn init() bool {
     vkrk_datamap_walk.register();
 
     vkrk_hud_debug.register();
+    vkrk_cmd_debug.register();
 
     event.session_start.connect(onSessionStart);
     event.paint.connect(onPaint);

@@ -20,16 +20,21 @@ pub fn createModule() *KrkInstance {
 
     module.setDoc("@brief Console operations.");
 
-    module.bindFunction("exec", exec).setDoc(
+    module.bindFunction("cmd", cmd).setDoc(
         \\@brief Runs a console command.
         \\@arguments command
         \\
         \\Runs @p command using `IVEngineClient::ClientCmd`.
     );
     module.bindFunction("find_var", find_var).setDoc(
-        \\@brief Finds a ConVar.
-        \\@arguments var_name
+        \\@brief Finds a `ConVar`.
+        \\@arguments name
         \\@return `ConVar` if found, `None` if not found.
+    );
+    module.bindFunction("find_command", find_command).setDoc(
+        \\@brief Finds a `ConCommand`.
+        \\@arguments name
+        \\@return `ConCommand` if found, `None` if not found.
     );
 
     ConVar.class = KrkClass.makeClass(module, ConVar, "ConVar", null);
@@ -65,49 +70,89 @@ pub fn createModule() *KrkInstance {
     );
     ConVar.class.finalizeClass();
 
+    ConCommand.class = KrkClass.makeClass(module, ConCommand, "ConCommand", null);
+    ConCommand.class.setDoc("Interface to a ConCommand.");
+    ConCommand.class.alloc_size = @sizeOf(ConCommand);
+    ConCommand.class.bindMethod("get_name", ConCommand.get_name).setDoc(
+        \\@brief Get the name of the ConVar.
+    );
+    _ = ConCommand.class.bindMethod("__repr__", ConCommand.__repr__);
+    ConCommand.class.bindMethod("__init__", ConCommand.__init__).setDoc(
+        \\@note ConVar objects can not be initialized using this constructor.
+    );
+    ConCommand.class.bindMethod("__call__", ConCommand.__call__).setDoc(
+        \\@brief Invokes the callback function of the command.
+    );
+    ConCommand.class.finalizeClass();
+
     return module;
 }
 
-fn exec(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
-    var cmd: [*:0]const u8 = undefined;
+fn cmd(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+    var command: [*:0]const u8 = undefined;
     if (!kuroko.parseArgs(
-        "exec",
+        "cmd",
         argc,
         argv,
         has_kw,
         "s",
         &.{"command"},
-        .{&cmd},
+        .{&command},
     )) {
         return KrkValue.noneValue();
     }
 
-    engine.client.clientCmd(cmd);
+    engine.client.clientCmd(command);
 
     return KrkValue.noneValue();
 }
 
 fn find_var(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
-    var var_name: [*:0]const u8 = undefined;
+    var name: [*:0]const u8 = undefined;
     if (!kuroko.parseArgs(
-        "exec",
+        "find_var",
         argc,
         argv,
         has_kw,
         "s",
-        &.{"var_name"},
-        .{&var_name},
+        &.{"name"},
+        .{&name},
     )) {
         return KrkValue.noneValue();
     }
 
-    const cvar = tier1.icvar.findVar(var_name) orelse {
+    const cvar = tier1.icvar.findVar(name) orelse {
         return KrkValue.noneValue();
     };
 
     const inst = KrkInstance.create(ConVar.class);
     const cvar_inst: *ConVar = @ptrCast(inst);
     cvar_inst.cvar = cvar;
+
+    return inst.asValue();
+}
+
+fn find_command(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+    var name: [*:0]const u8 = undefined;
+    if (!kuroko.parseArgs(
+        "find_command",
+        argc,
+        argv,
+        has_kw,
+        "s",
+        &.{"name"},
+        .{&name},
+    )) {
+        return KrkValue.noneValue();
+    }
+
+    const command = tier1.icvar.findCommand(name) orelse {
+        return KrkValue.noneValue();
+    };
+
+    const inst = KrkInstance.create(ConCommand.class);
+    const command_inst: *ConCommand = @ptrCast(inst);
+    command_inst.command = command;
 
     return inst.asValue();
 }
@@ -129,7 +174,7 @@ const ConVar = extern struct {
     fn __repr__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
         _ = has_kw;
         if (argc != 1) {
-            return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc - 1});
+            return VM.getInstance().exceptions.argumentError.runtimeError("__repr__() takes no arguments (%d given)", .{argc - 1});
         }
 
         const self = asConVar(argv[0]);
@@ -225,5 +270,101 @@ const ConVar = extern struct {
 
         const self = asConVar(argv[0]);
         return KrkValue.boolValue(self.cvar.getBool());
+    }
+};
+
+const ConCommand = extern struct {
+    inst: KrkInstance,
+    command: *tier1.ConCommand,
+
+    var class: *KrkClass = undefined;
+
+    fn isConCommand(v: KrkValue) bool {
+        return v.isInstanceOf(class);
+    }
+
+    fn asConCommand(v: KrkValue) *ConCommand {
+        return @ptrCast(v.asObject());
+    }
+
+    fn __repr__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+        _ = has_kw;
+        if (argc != 1) {
+            return VM.getInstance().exceptions.argumentError.runtimeError("__repr__() takes no arguments (%d given)", .{argc - 1});
+        }
+
+        const self = asConCommand(argv[0]);
+        return KrkValue.stringFromFormat("<ConCommand %s at %p>", .{ self.command.base.name, @intFromPtr(self) });
+    }
+
+    fn __init__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+        _ = argc;
+        _ = argv;
+        _ = has_kw;
+        return VM.getInstance().exceptions.typeError.runtimeError("ConCommand objects can not be instantiated.", .{});
+    }
+
+    fn __call__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+        _ = has_kw;
+        if (argc < 1) {
+            return VM.getInstance().exceptions.argumentError.runtimeError("__call__() required self", .{});
+        }
+
+        const self = asConCommand(argv[0]);
+        const command = self.command;
+
+        const max_length = tier1.CCommand.max_length;
+        const max_argc = tier1.CCommand.max_argc;
+
+        if (argc > max_argc) {
+            return VM.getInstance().exceptions.argumentError.runtimeError("Too many arguments", .{});
+        }
+
+        var ccmd: tier1.CCommand = .{
+            .argc = argc,
+            .argv_0_size = @intCast(std.mem.len(command.base.name)),
+            .args_buffer = std.mem.zeroes([max_length]u8),
+            .argv_buffer = std.mem.zeroes([max_length]u8),
+            .argv = undefined,
+        };
+
+        var buffer_index: u32 = 0;
+        var i: u32 = 0;
+        while (i < argc) : (i += 1) {
+            var arg: []const u8 = undefined;
+            if (i == 0) {
+                arg = std.mem.span(command.base.name);
+            } else {
+                if (!argv[i].isString()) {
+                    return VM.getInstance().exceptions.typeError.runtimeError("Expected str", .{});
+                }
+                arg = std.mem.span(argv[i].asString().chars);
+            }
+
+            if (buffer_index + arg.len >= max_length or buffer_index + arg.len + 1 >= max_length) {
+                return VM.getInstance().exceptions.argumentError.runtimeError("Arguments too long", .{});
+            }
+
+            std.mem.copyForwards(u8, ccmd.args_buffer[buffer_index..], arg);
+            ccmd.args_buffer[buffer_index + arg.len] = if (i + 1 == argc) 0 else ' ';
+            std.mem.copyForwards(u8, ccmd.argv_buffer[buffer_index..], arg);
+            ccmd.argv_buffer[buffer_index + arg.len] = 0;
+            ccmd.argv[i] = @ptrCast(ccmd.argv_buffer[buffer_index..].ptr);
+            buffer_index += arg.len + 1;
+        }
+
+        command.dispatch(&ccmd);
+
+        return KrkValue.noneValue();
+    }
+
+    fn get_name(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+        _ = has_kw;
+        if (argc != 1) {
+            return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc - 1});
+        }
+
+        const self = asConCommand(argv[0]);
+        return KrkString.copyString(self.command.base.name).asValue();
     }
 };
