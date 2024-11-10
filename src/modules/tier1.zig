@@ -72,8 +72,8 @@ pub const CCommand = extern struct {
     argv_buffer: [max_length]u8,
     argv: [max_argc][*:0]const u8,
 
-    const max_argc = 64;
-    const max_length = 512;
+    pub const max_argc = 64;
+    pub const max_length = 512;
 
     pub fn args(self: *const CCommand, index: usize) []const u8 {
         return std.mem.span(self.argv[index]);
@@ -101,11 +101,15 @@ pub const ConCommand = extern struct {
         base: ConCommandBase.VTable,
         autoCompleteSuggest: *const anyopaque,
         canAutoComplete: *const anyopaque,
-        dispatch: *const anyopaque,
+        dispatch: *const fn (this: *anyopaque, command: *const CCommand) callconv(.Thiscall) void,
     };
 
     fn vt(self: *const ConCommand) *const VTable {
         return @ptrCast(self.base._vt);
+    }
+
+    pub fn dispatch(self: *ConCommand, command: *const CCommand) void {
+        self.vt().dispatch(self, command);
     }
 
     pub fn init(cmd: struct {
