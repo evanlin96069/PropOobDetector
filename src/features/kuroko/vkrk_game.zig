@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const modules = @import("../../../modules.zig");
+const modules = @import("../../modules.zig");
 const engine = modules.engine;
 
-const game_detection = @import("../../../utils/game_detection.zig");
+const game_detection = @import("../../utils/game_detection.zig");
 
 const kuroko = @import("kuroko");
 const VM = kuroko.KrkVM;
@@ -11,14 +11,7 @@ const KrkValue = kuroko.KrkValue;
 const KrkString = kuroko.KrkString;
 const KrkInstance = kuroko.KrkInstance;
 
-pub fn createModule() *KrkInstance {
-    const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
-    VM.push(module.asValue());
-    module.fields.attachNamedValue("__name__", KrkString.copyString("game").asValue());
-    module.fields.attachNamedValue("__file__", KrkValue.noneValue());
-
-    module.setDoc("@brief Game-related functions.");
-
+pub fn bindAttributes(module: *KrkInstance) void {
     module.bindFunction("get_game_dir", get_game_dir).setDoc(
         \\@brief Gets the absolute path to the game directory.
     );
@@ -31,8 +24,6 @@ pub fn createModule() *KrkInstance {
         \\@brief Gets the build number
         \\@return Build number, -1 if build number not available
     );
-
-    return module;
 }
 
 fn get_game_dir(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
