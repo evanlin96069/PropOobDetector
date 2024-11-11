@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const modules = @import("../../../modules.zig");
+const modules = @import("../../modules.zig");
 const tier0 = modules.tier0;
 const tier1 = modules.tier1;
 const engine = modules.engine;
@@ -12,14 +12,7 @@ const KrkString = kuroko.KrkString;
 const KrkInstance = kuroko.KrkInstance;
 const KrkClass = kuroko.KrkClass;
 
-pub fn createModule() *KrkInstance {
-    const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
-    VM.push(module.asValue());
-    module.fields.attachNamedValue("__name__", KrkString.copyString("console").asValue());
-    module.fields.attachNamedValue("__file__", KrkValue.noneValue());
-
-    module.setDoc("@brief Console operations.");
-
+pub fn bindAttributes(module: *KrkInstance) void {
     module.bindFunction("cmd", cmd).setDoc(
         \\@brief Runs a console command.
         \\@arguments command
@@ -46,7 +39,7 @@ pub fn createModule() *KrkInstance {
     ConVar.class.bindMethod("get_default", ConVar.get_default).setDoc(
         \\@brief Get the default string value of the ConVar.
     );
-    ConVar.class.bindMethod("set_val", ConVar.set_val).setDoc(
+    ConVar.class.bindMethod("set_value", ConVar.set_value).setDoc(
         \\@brief Set the value of the ConVar.
         \\@arguments value
         \\
@@ -84,8 +77,6 @@ pub fn createModule() *KrkInstance {
         \\@brief Invokes the callback function of the command.
     );
     ConCommand.class.finalizeClass();
-
-    return module;
 }
 
 fn cmd(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
@@ -208,10 +199,10 @@ const ConVar = extern struct {
         return KrkString.copyString(self.cvar.default_value).asValue();
     }
 
-    fn set_val(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
+    fn set_value(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
         _ = has_kw;
         if (argc != 2) {
-            return VM.getInstance().exceptions.argumentError.runtimeError("set_val() takes exactly 1 argument (%d given)", .{argc - 1});
+            return VM.getInstance().exceptions.argumentError.runtimeError("set_value() takes exactly 1 argument (%d given)", .{argc - 1});
         }
 
         const self = asConVar(argv[0]);
@@ -226,7 +217,7 @@ const ConVar = extern struct {
         } else if (value.isBool()) {
             self.cvar.setInt(@intFromBool(value.asBool()));
         } else {
-            return VM.getInstance().exceptions.typeError.runtimeError("bad value type for set_val()", .{});
+            return VM.getInstance().exceptions.typeError.runtimeError("bad value type for set_value()", .{});
         }
 
         return KrkValue.noneValue();

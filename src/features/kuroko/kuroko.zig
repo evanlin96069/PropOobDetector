@@ -14,8 +14,8 @@ const KrkString = kuroko.KrkString;
 const KrkInstance = kuroko.KrkInstance;
 const StringBuilder = kuroko.StringBuilder;
 
-const vkrk_console = @import("modules/vkrk_console.zig");
-const vkrk_game = @import("modules/vkrk_game.zig");
+const vkrk_console = @import("vkrk_console.zig");
+const vkrk_game = @import("vkrk_game.zig");
 
 pub var feature: Feature = .{
     .name = "kuroko",
@@ -109,9 +109,7 @@ fn resetKrkVM() void {
 fn initKrkVM() void {
     VM.init(.{});
 
-    const module = VKrkModule.createModule();
-    VM.getInstance().modules.attachNamedValue("vkuroko", module.asValue());
-    VM.resetStack();
+    initVkurokoModule();
 
     _ = VM.startModule("__main__");
 
@@ -124,21 +122,28 @@ fn initKrkVM() void {
     _ = VM.pop();
 }
 
-const VKrkModule = struct {
-    pub fn createModule() *KrkInstance {
-        const module = KrkInstance.create(VM.getInstance().base_classes.moduleClass);
-        VM.push(module.asValue());
-        module.fields.attachNamedValue("__name__", KrkString.copyString("vkuroko").asValue());
-        module.fields.attachNamedValue("__file__", KrkValue.noneValue());
+pub fn initVkurokoModule() void {
+    const module_name = "vkuroko";
+    const module = VM.startModule(module_name);
 
-        module.setDoc("@brief Source Engine module.");
+    module.setDoc("@brief Source Engine module.");
 
-        module.fields.attachNamedValue("console", vkrk_console.createModule().asValue());
-        module.fields.attachNamedValue("game", vkrk_game.createModule().asValue());
+    vkrk_console.bindAttributes(module);
+    vkrk_game.bindAttributes(module);
 
-        return module;
-    }
-};
+    _ = VM.interpret(
+        \\class _Config:
+        \\  '''@brief Object for finding ConVar and ConCommand'''
+        \\
+        \\  def __getattr__(self, name):
+        \\    let cvar = find_var(name)
+        \\    if cvar is not None:
+        \\      return cvar
+        \\    return find_command(name)
+        \\
+        \\let cfg = _Config()
+    , module_name);
+}
 
 fn shouldLoad() bool {
     return true;
