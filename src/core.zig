@@ -33,8 +33,6 @@ const features: []const *Feature = mods: {
         @import("features/datamap.zig"),
         @import("features/texthud.zig"),
         @import("features/playerio.zig"),
-        @import("features/strafehud.zig"),
-        @import("features/oobent.zig"),
     }) |file| {
         mods = mods ++ .{&file.feature};
     }
