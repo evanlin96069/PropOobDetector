@@ -17,12 +17,12 @@ pub fn bindAttributes(module: *KrkInstance) void {
     );
 
     module.bindFunction("is_portal", is_portal).setDoc(
-        \\@brief Does game looks like Portal?
+        \\@brief Does game look like Portal?
     );
 
     module.bindFunction("get_build_number", get_build_number).setDoc(
         \\@brief Gets the build number
-        \\@return Build number, -1 if build number not available
+        \\@return Build number, `None` if build number not available
     );
 }
 
@@ -53,5 +53,8 @@ fn get_build_number(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callcon
         return VM.getInstance().exceptions.argumentError.runtimeError("get_build_number() takes no arguments (%d given)", .{argc});
     }
 
-    return KrkValue.intValue(game_detection.getBuildNumber());
+    if (game_detection.getBuildNumber()) |build_num| {
+        return KrkValue.intValue(build_num);
+    }
+    return KrkValue.noneValue();
 }

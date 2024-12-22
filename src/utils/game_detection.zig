@@ -19,16 +19,18 @@ pub fn doesGameLooksLikePortal() bool {
     return S.result != null;
 }
 
-pub fn getBuildNumber() i32 {
+pub fn getBuildNumber() ?i32 {
     const S = struct {
+        var initialized: bool = false;
         var build_num: ?i32 = null;
     };
 
-    if (S.build_num) |build_num| {
-        return build_num;
+    if (S.initialized) {
+        return S.build_num;
     }
 
     const build_num = findBuildNumber();
+    S.initialized = true;
     S.build_num = build_num;
     return build_num;
 }
@@ -36,8 +38,8 @@ pub fn getBuildNumber() i32 {
 // Exe build:
 const build_str = zhook.mem.makePattern("45 78 65 20 62 75 69 6C 64 3A");
 
-fn findBuildNumber() i32 {
-    var build_num: i32 = -1;
+fn findBuildNumber() ?i32 {
+    var build_num: ?i32 = null;
     if (zhook.mem.getModule("engine")) |engine_dll| {
         if (zhook.mem.scanFirst(engine_dll, build_str)) |offset| {
             build_num = calculateBuildNumber(engine_dll[offset + 20 .. offset + 31]);
