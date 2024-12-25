@@ -354,7 +354,7 @@ const ICvar = extern struct {
         allocateDLLIDentifier: *const fn (this: *anyopaque) callconv(.Thiscall) c_int,
 
         registerConCommandBase: *const fn (this: *anyopaque, cmd: *ConCommandBase) callconv(.Thiscall) void,
-        unregisterConCommand: *const anyopaque,
+        unregisterConCommand: *const fn (this: *anyopaque, cmd: *ConCommandBase) callconv(.Thiscall) void,
         unregisterConCommands: *const fn (this: *anyopaque, id: c_int) callconv(.Thiscall) void,
 
         getCommandLineValue: *const anyopaque,
@@ -391,6 +391,10 @@ const ICvar = extern struct {
 
     fn allocateDLLIDentifier(self: *ICvar) void {
         dll_identifier = self.vt().allocateDLLIDentifier(self);
+    }
+
+    fn unregisterConCommand(self: *ICvar, cmd: *ConCommandBase) void {
+        self.vt().unregisterConCommand(self, cmd);
     }
 
     fn unregisterConCommands(self: *ICvar) void {
