@@ -102,6 +102,8 @@ fn krk_reset_Fn(args: *const tier1.CCommand) callconv(.C) void {
 }
 
 fn resetKrkVM() void {
+    vkrk_console.destroyDynCommands();
+
     VM.deinit();
     initKrkVM();
 }

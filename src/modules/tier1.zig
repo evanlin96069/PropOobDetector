@@ -150,6 +150,17 @@ pub const IConVar = extern struct {
     };
 };
 
+// For init ConVar
+pub const ConVarData = struct {
+    name: [*:0]const u8,
+    default_value: [*:0]const u8,
+    flags: FCvar = .{},
+    help_string: [*:0]const u8 = "",
+    min_value: ?f32 = null,
+    max_value: ?f32 = null,
+    change_callback: ?ConVar.ChangeCallbackFn = null,
+};
+
 pub const ConVar = extern struct {
     base1: ConCommandBase,
     base2: IConVar = .{
@@ -172,7 +183,7 @@ pub const ConVar = extern struct {
 
     change_callback: ?ChangeCallbackFn = null,
 
-    const ChangeCallbackFn = *const fn (cvar: *IConVar, old_string: [*:0]const u8, old_value: f32) callconv(.C) void;
+    pub const ChangeCallbackFn = *const fn (cvar: *IConVar, old_string: [*:0]const u8, old_value: f32) callconv(.C) void;
 
     var vtable_meta: extern struct {
         rtti: *const anyopaque,
@@ -200,6 +211,23 @@ pub const ConVar = extern struct {
         ) callconv(.Thiscall) void,
     };
 
+    pub fn init(cvar: ConVarData) ConVar {
+        return ConVar{
+            .base1 = .{
+                ._vt = &ConVar.vtable_meta.vtable,
+                .name = cvar.name,
+                .flags = cvar.flags,
+                .help_string = cvar.help_string,
+            },
+            .default_value = cvar.default_value,
+            .has_min = cvar.min_value != null,
+            .min_value = if (cvar.min_value) |v| v else 0.0,
+            .has_max = cvar.max_value != null,
+            .max_value = if (cvar.max_value) |v| v else 0.0,
+            .change_callback = cvar.change_callback,
+        };
+    }
+
     fn vt1(self: *const ConVar) *const VTable {
         return @ptrCast(self.base1._vt);
     }
@@ -208,7 +236,7 @@ pub const ConVar = extern struct {
         return @ptrCast(self.base2._vt);
     }
 
-    fn register(self: *ConVar) void {
+    pub fn register(self: *ConVar) void {
         self.vt1().create(
             self,
             self.base1.name,
@@ -275,30 +303,9 @@ pub const Variable = extern struct {
 
     var vars: ?*Variable = null;
 
-    pub fn init(cvar: struct {
-        name: [*:0]const u8,
-        default_value: [*:0]const u8,
-        flags: FCvar = .{},
-        help_string: [*:0]const u8 = "",
-        min_value: ?f32 = null,
-        max_value: ?f32 = null,
-        change_callback: ?ConVar.ChangeCallbackFn = null,
-    }) Variable {
+    pub fn init(cvar: ConVarData) Variable {
         return Variable{
-            .cvar = .{
-                .base1 = .{
-                    ._vt = &ConVar.vtable_meta.vtable,
-                    .name = cvar.name,
-                    .flags = cvar.flags,
-                    .help_string = cvar.help_string,
-                },
-                .default_value = cvar.default_value,
-                .has_min = cvar.min_value != null,
-                .min_value = if (cvar.min_value) |v| v else 0.0,
-                .has_max = cvar.max_value != null,
-                .max_value = if (cvar.max_value) |v| v else 0.0,
-                .change_callback = cvar.change_callback,
-            },
+            .cvar = ConVar.init(cvar),
         };
     }
 
@@ -393,7 +400,7 @@ const ICvar = extern struct {
         dll_identifier = self.vt().allocateDLLIDentifier(self);
     }
 
-    fn unregisterConCommand(self: *ICvar, cmd: *ConCommandBase) void {
+    pub fn unregisterConCommand(self: *ICvar, cmd: *ConCommandBase) void {
         self.vt().unregisterConCommand(self, cmd);
     }
 
