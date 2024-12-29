@@ -160,8 +160,8 @@ pub const KrkValue = packed struct(u64) {
         return krk_getType(value);
     }
 
-    pub inline fn isInstanceOf(obj: KrkValue, class_type: *const KrkClass) c_int {
-        return krk_isInstanceOf(obj, class_type);
+    pub inline fn isInstanceOf(obj: KrkValue, class_type: *const KrkClass) bool {
+        return krk_isInstanceOf(obj, class_type) != 0;
     }
 
     pub inline fn callValue(callee: KrkValue, arg_count: c_int, callable_on_stack: c_int) c_int {
