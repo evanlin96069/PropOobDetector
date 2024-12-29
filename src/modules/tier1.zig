@@ -92,8 +92,16 @@ pub const ConCommand = extern struct {
         _pad_0: u5 = 0,
     } = .{},
 
-    const CommandCallbackFn = *const fn (args: *const CCommand) callconv(.C) void;
-    const CommandCompletionCallbackFn = *const fn (partial: [*:0]const u8, commands: [*][*]u8) callconv(.C) void;
+    pub const CommandCallbackFn = *const fn (args: *const CCommand) callconv(.C) void;
+    pub const CommandCompletionCallbackFn = *const fn (partial: [*:0]const u8, commands: [*][*]u8) callconv(.C) void;
+
+    pub const Data = struct {
+        name: [*:0]const u8,
+        help_string: [*:0]const u8 = "",
+        flags: FCvar = .{},
+        command_callback: CommandCallbackFn,
+        completion_callback: ?CommandCompletionCallbackFn = null,
+    };
 
     var vtable: VTable = undefined;
 
@@ -112,13 +120,7 @@ pub const ConCommand = extern struct {
         self.vt().dispatch(self, command);
     }
 
-    pub fn init(cmd: struct {
-        name: [*:0]const u8,
-        help_string: [*:0]const u8 = "",
-        flags: FCvar = .{},
-        command_callback: CommandCallbackFn,
-        completion_callback: ?CommandCompletionCallbackFn = null,
-    }) ConCommand {
+    pub fn init(cmd: Data) ConCommand {
         return ConCommand{
             .base = .{
                 ._vt = &ConCommand.vtable,
@@ -150,17 +152,6 @@ pub const IConVar = extern struct {
     };
 };
 
-// For init ConVar
-pub const ConVarData = struct {
-    name: [*:0]const u8,
-    default_value: [*:0]const u8,
-    flags: FCvar = .{},
-    help_string: [*:0]const u8 = "",
-    min_value: ?f32 = null,
-    max_value: ?f32 = null,
-    change_callback: ?ConVar.ChangeCallbackFn = null,
-};
-
 pub const ConVar = extern struct {
     base1: ConCommandBase,
     base2: IConVar = .{
@@ -185,6 +176,16 @@ pub const ConVar = extern struct {
 
     pub const ChangeCallbackFn = *const fn (cvar: *IConVar, old_string: [*:0]const u8, old_value: f32) callconv(.C) void;
 
+    pub const Data = struct {
+        name: [*:0]const u8,
+        default_value: [*:0]const u8,
+        flags: FCvar = .{},
+        help_string: [*:0]const u8 = "",
+        min_value: ?f32 = null,
+        max_value: ?f32 = null,
+        change_callback: ?ConVar.ChangeCallbackFn = null,
+    };
+
     var vtable_meta: extern struct {
         rtti: *const anyopaque,
         vtable: VTable,
@@ -192,7 +193,6 @@ pub const ConVar = extern struct {
 
     const VTable = extern struct {
         base: ConCommandBase.VTable,
-        _setString: *const anyopaque,
         _setFloat: *const anyopaque,
         _setInt: *const anyopaque,
         clampValue: *const anyopaque,
@@ -211,7 +211,7 @@ pub const ConVar = extern struct {
         ) callconv(.Thiscall) void,
     };
 
-    pub fn init(cvar: ConVarData) ConVar {
+    pub fn init(cvar: Data) ConVar {
         return ConVar{
             .base1 = .{
                 ._vt = &ConVar.vtable_meta.vtable,
@@ -303,7 +303,7 @@ pub const Variable = extern struct {
 
     var vars: ?*Variable = null;
 
-    pub fn init(cvar: ConVarData) Variable {
+    pub fn init(cvar: ConVar.Data) Variable {
         return Variable{
             .cvar = ConVar.init(cvar),
         };

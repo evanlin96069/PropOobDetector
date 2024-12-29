@@ -168,6 +168,10 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("__repr__() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConVar(argv[0]);
         return KrkValue.stringFromFormat("<ConVar %s at %p>", .{ self.cvar.base1.name, @intFromPtr(self) });
     }
@@ -185,7 +189,7 @@ const ConVar = extern struct {
             argc,
             argv,
             has_kw,
-            "sV|ziVV",
+            ".sV|ziVV",
             &.{
                 "name",
                 "default_value",
@@ -205,6 +209,12 @@ const ConVar = extern struct {
         )) {
             return KrkValue.noneValue();
         }
+
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("__init__() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
+        const self = asConVar(argv[0]);
 
         if (tier1.icvar.findVar(name) != null) {
             return VM.getInstance().exceptions.valueError.runtimeError("name already exists.", .{min_value.value});
@@ -255,20 +265,21 @@ const ConVar = extern struct {
                 .max_value = f_max,
                 .change_callback = null,
             },
-        ) catch unreachable; // Should we handle this?
+        ) catch unreachable;
         dyn_cvar.register();
 
-        const inst = KrkInstance.create(ConVar.class);
-        const cvar_inst: *ConVar = @ptrCast(inst);
-        cvar_inst.cvar = &dyn_cvar.cvar;
-
-        return inst.asValue();
+        self.cvar = &dyn_cvar.cvar;
+        return argv[0];
     }
 
     fn get_name(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
         _ = has_kw;
         if (argc != 1) {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc - 1});
+        }
+
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConVar, not '%T'", .{ argv[0].value });
         }
 
         const self = asConVar(argv[0]);
@@ -281,6 +292,10 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_default() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_default() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConVar(argv[0]);
         return KrkString.copyString(self.cvar.default_value).asValue();
     }
@@ -291,8 +306,11 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("set_value() takes exactly 1 argument (%d given)", .{argc - 1});
         }
 
-        const self = asConVar(argv[0]);
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("set_value() expects ConVar, not '%T'", .{ argv[0].value });
+        }
 
+        const self = asConVar(argv[0]);
         const value = argv[1];
         if (value.isString()) {
             self.cvar.setString(value.asCString());
@@ -315,6 +333,10 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_string() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_string() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConVar(argv[0]);
         return KrkString.copyString(self.cvar.getString()).asValue();
     }
@@ -323,6 +345,10 @@ const ConVar = extern struct {
         _ = has_kw;
         if (argc != 1) {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_float() takes no arguments (%d given)", .{argc - 1});
+        }
+
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_float() expects ConVar, not '%T'", .{ argv[0].value });
         }
 
         const self = asConVar(argv[0]);
@@ -335,6 +361,10 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_int() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_int() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConVar(argv[0]);
         return KrkValue.intValue(self.cvar.getInt());
     }
@@ -345,6 +375,10 @@ const ConVar = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_bool() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConVar(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_bool() expects ConVar, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConVar(argv[0]);
         return KrkValue.boolValue(self.cvar.getBool());
     }
@@ -352,7 +386,7 @@ const ConVar = extern struct {
 
 const ConCommand = extern struct {
     inst: KrkInstance,
-    command: *tier1.ConCommand,
+    command: ?*tier1.ConCommand,
 
     var class: *KrkClass = undefined;
 
@@ -370,8 +404,16 @@ const ConCommand = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("__repr__() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConCommand(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConCommand, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConCommand(argv[0]);
-        return KrkValue.stringFromFormat("<ConCommand %s at %p>", .{ self.command.base.name, @intFromPtr(self) });
+        if (self.command) |command| {
+            return KrkValue.stringFromFormat("<ConCommand %s at %p>", .{ command.base.name, @intFromPtr(self) });
+        }
+
+        return KrkValue.stringFromFormat("<ConCommand decorator at %p>", .{ @intFromPtr(self) });
     }
 
     fn __init__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
@@ -387,8 +429,15 @@ const ConCommand = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("__call__() required self", .{});
         }
 
+        if (!isConCommand(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("__call__() expects ConCommand, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConCommand(argv[0]);
-        const command = self.command;
+        if (self.command == null) {
+            return VM.getInstance().exceptions.Exception.runtimeError("ConCommand not initialized", .{});
+        }
+        const command = self.command.?;
 
         const max_length = tier1.CCommand.max_length;
         const max_argc = tier1.CCommand.max_argc;
@@ -441,8 +490,16 @@ const ConCommand = extern struct {
             return VM.getInstance().exceptions.argumentError.runtimeError("get_name() takes no arguments (%d given)", .{argc - 1});
         }
 
+        if (!isConCommand(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConCommand, not '%T'", .{ argv[0].value });
+        }
+
         const self = asConCommand(argv[0]);
-        return KrkString.copyString(self.command.base.name).asValue();
+        if (self.command) |command| {
+            return KrkString.copyString(command.base.name).asValue();
+        }
+
+        return VM.getInstance().exceptions.Exception.runtimeError("ConCommand not initialized", .{});
     }
 };
 
@@ -452,8 +509,7 @@ const DynConVar = struct {
 
     var vars: ?*DynConVar = null;
 
-    fn create(cvar: tier1.ConVarData) !*DynConVar {
-        // I'm not sure about the litetime of a kuroko strings, make a copy just in case.
+    fn create(cvar: tier1.ConVar.Data) !*DynConVar {
         const copy_name = try tier0.allocator.dupeZ(u8, std.mem.span(cvar.name));
         errdefer tier0.allocator.free(copy_name);
         const copy_default = try tier0.allocator.dupeZ(u8, std.mem.span(cvar.default_value));
@@ -461,7 +517,7 @@ const DynConVar = struct {
         const copy_help = try tier0.allocator.dupeZ(u8, std.mem.span(cvar.help_string));
         errdefer tier0.allocator.free(copy_help);
 
-        var copy_cvar: tier1.ConVarData = cvar;
+        var copy_cvar: tier1.ConVar.Data = cvar;
         copy_cvar.name = copy_name;
         copy_cvar.default_value = copy_default;
         copy_cvar.help_string = copy_help;
@@ -489,6 +545,43 @@ const DynConVar = struct {
         tier0.allocator.free(std.mem.span(self.cvar.base1.name));
         tier0.allocator.free(std.mem.span(self.cvar.base1.help_string));
         tier0.allocator.free(std.mem.span(self.cvar.default_value));
+    }
+};
+
+const DynConCommand = struct {
+    cmd: tier1.ConCommand,
+    next: ?*DynConCommand = null,
+
+    var cmds: ?*DynConCommand = null;
+
+    fn create(command: tier1.ConCommand.Data) !*DynConCommand {
+        const copy_name = try tier0.allocator.dupeZ(u8, std.mem.span(command.name));
+        errdefer tier0.allocator.free(copy_name);
+        const copy_help = try tier0.allocator.dupeZ(u8, std.mem.span(command.help_string));
+        errdefer tier0.allocator.free(copy_help);
+
+        var copy_cmd: tier1.ConCommand.Data = command;
+        copy_cmd.name = copy_name;
+        copy_cmd.help_string = copy_help;
+
+        const result = try tier0.allocator.create(DynConCommand);
+        result.* = DynConCommand{
+            .cmd= tier1.ConCommand.init(copy_cmd),
+        };
+
+        return result;
+    }
+
+    fn register(self: *DynConCommand) void {
+        self.cmd.register();
+
+        self.next = DynConCommand.cmds;
+        DynConCommand.cmds= self;
+    }
+
+    fn deinit(self: *DynConCommand) void {
+        tier0.allocator.free(std.mem.span(self.cmd.base1.name));
+        tier0.allocator.free(std.mem.span(self.cmd.base1.help_string));
     }
 };
 
