@@ -9,6 +9,7 @@ const kuroko = @import("kuroko");
 const VM = kuroko.KrkVM;
 const KrkValue = kuroko.KrkValue;
 const KrkString = kuroko.KrkString;
+const KrkList = kuroko.KrkList;
 const KrkInstance = kuroko.KrkInstance;
 const KrkClass = kuroko.KrkClass;
 
@@ -59,7 +60,7 @@ pub fn bindAttributes(module: *KrkInstance) void {
     );
     _ = ConVar.class.bindMethod("__repr__", ConVar.__repr__);
     ConVar.class.bindMethod("__init__", ConVar.__init__).setDoc(
-        \\@note Create a new ConVar. Use `find_var` to get existing ConVar. 
+        \\@brief Create a new ConVar. Use `find_var` to get existing cvar.
     );
     ConVar.class.finalizeClass();
 
@@ -71,7 +72,7 @@ pub fn bindAttributes(module: *KrkInstance) void {
     );
     _ = ConCommand.class.bindMethod("__repr__", ConCommand.__repr__);
     ConCommand.class.bindMethod("__init__", ConCommand.__init__).setDoc(
-        \\@note ConVar objects can not be initialized using this constructor.
+        \\@brief Create and register a new ConCommand. Use `find_command` to get existing command.
     );
     ConCommand.class.bindMethod("__call__", ConCommand.__call__).setDoc(
         \\@brief Invokes the callback function of the command.
@@ -169,7 +170,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -211,7 +212,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("__init__() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("__init__() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -279,7 +280,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -293,7 +294,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_default() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_default() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -307,7 +308,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("set_value() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("set_value() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -334,7 +335,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_string() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_string() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -348,7 +349,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_float() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_float() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -362,7 +363,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_int() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_int() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -376,7 +377,7 @@ const ConVar = extern struct {
         }
 
         if (!isConVar(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_bool() expects ConVar, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_bool() expects ConVar, not '%T'", .{argv[0].value});
         }
 
         const self = asConVar(argv[0]);
@@ -387,6 +388,9 @@ const ConVar = extern struct {
 const ConCommand = extern struct {
     inst: KrkInstance,
     command: ?*tier1.ConCommand,
+
+    flags: i32 = 0,
+    completion_callback: ?tier1.ConCommand.CommandCompletionCallbackFn = null,
 
     var class: *KrkClass = undefined;
 
@@ -405,7 +409,7 @@ const ConCommand = extern struct {
         }
 
         if (!isConCommand(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConCommand, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("__repr__() expects ConCommand, not '%T'", .{argv[0].value});
         }
 
         const self = asConCommand(argv[0]);
@@ -413,14 +417,68 @@ const ConCommand = extern struct {
             return KrkValue.stringFromFormat("<ConCommand %s at %p>", .{ command.base.name, @intFromPtr(self) });
         }
 
-        return KrkValue.stringFromFormat("<ConCommand decorator at %p>", .{ @intFromPtr(self) });
+        return KrkValue.stringFromFormat("<ConCommand decorator at %p>", .{@intFromPtr(self)});
+    }
+
+    fn createCommand(self: KrkValue, callback: KrkValue, flags: i32) KrkValue {
+        const inst = asConCommand(self);
+        const v_name = self.getAttribute("__name__");
+        if (v_name.isNone()) {
+            return KrkValue.noneValue();
+        }
+        const name = v_name.asString().chars;
+
+        const v_doc = self.getAttributeDefault("__doc__", KrkValue.noneValue());
+        var help_string: [*:0]const u8 = "";
+        if (v_doc.isString()) {
+            help_string = v_doc.asString().chars;
+        }
+
+        const dyn_cmd = DynConCommand.create(.{
+            .name = name,
+            .help_string = help_string,
+            .flags = @bitCast(flags),
+            .callback = callback,
+        }) catch unreachable;
+        dyn_cmd.register();
+
+        inst.command = &dyn_cmd.cmd;
+        return self;
     }
 
     fn __init__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
-        _ = argc;
-        _ = argv;
-        _ = has_kw;
-        return VM.getInstance().exceptions.typeError.runtimeError("ConCommand objects can not be instantiated.", .{});
+        var callback: KrkValue = KrkValue.noneValue();
+        var flags: i32 = 0;
+
+        if (!kuroko.parseArgs(
+            "__init__",
+            argc,
+            argv,
+            has_kw,
+            ".|Vi",
+            &.{
+                "callback",
+                "flags",
+            },
+            .{
+                &callback,
+                &flags,
+            },
+        )) {
+            return KrkValue.noneValue();
+        }
+
+        if (!isConCommand(argv[0])) {
+            return VM.getInstance().exceptions.typeError.runtimeError("__init__() expects ConCommand, not '%T'", .{argv[0].value});
+        }
+
+        const inst = asConCommand(argv[0]);
+        if (callback.isNone()) {
+            inst.flags = flags;
+            return argv[0];
+        }
+
+        return createCommand(argv[0], callback, flags);
     }
 
     fn __call__(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) callconv(.C) KrkValue {
@@ -430,13 +488,17 @@ const ConCommand = extern struct {
         }
 
         if (!isConCommand(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("__call__() expects ConCommand, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("__call__() expects ConCommand, not '%T'", .{argv[0].value});
         }
 
         const self = asConCommand(argv[0]);
         if (self.command == null) {
-            return VM.getInstance().exceptions.Exception.runtimeError("ConCommand not initialized", .{});
+            if (argc != 2) {
+                return VM.getInstance().exceptions.argumentError.runtimeError("__call__() should be use as a decorator when ConCommand is not initialized", .{});
+            }
+            return createCommand(argv[0], argv[1], self.flags);
         }
+
         const command = self.command.?;
 
         const max_length = tier1.CCommand.max_length;
@@ -491,7 +553,7 @@ const ConCommand = extern struct {
         }
 
         if (!isConCommand(argv[0])) {
-            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConCommand, not '%T'", .{ argv[0].value });
+            return VM.getInstance().exceptions.typeError.runtimeError("get_name() expects ConCommand, not '%T'", .{argv[0].value});
         }
 
         const self = asConCommand(argv[0]);
@@ -550,23 +612,59 @@ const DynConVar = struct {
 
 const DynConCommand = struct {
     cmd: tier1.ConCommand,
+    callback: KrkValue,
     next: ?*DynConCommand = null,
 
     var cmds: ?*DynConCommand = null;
 
-    fn create(command: tier1.ConCommand.Data) !*DynConCommand {
+    fn vkrkCommandCallback(args: *const tier1.CCommand) callconv(.C) void {
+        if (args.argc < 1) {
+            std.log.warn("vkrk: No command name.", .{});
+            return;
+        }
+
+        const name = std.mem.span(args.argv[0]);
+        var it = cmds;
+        while (it) |command| : (it = command.next) {
+            if (std.mem.eql(u8, name, std.mem.span(command.cmd.base.name))) {
+                const list = KrkList.listOf(0, null, false);
+                var i: u32 = 0;
+                while (i < args.argc) : (i += 1) {
+                    list.asList().append(KrkString.copyString(args.argv[i]).asValue());
+                }
+
+                VM.push(command.callback);
+                VM.push(list);
+                _ = VM.callStack(1);
+            }
+        }
+
+        std.log.warn("vkrk: Unknown command.", .{});
+    }
+
+    fn create(command: struct {
+        name: [*:0]const u8,
+        help_string: [*:0]const u8,
+        flags: tier1.FCvar = .{},
+        callback: KrkValue,
+    }) !*DynConCommand {
         const copy_name = try tier0.allocator.dupeZ(u8, std.mem.span(command.name));
         errdefer tier0.allocator.free(copy_name);
         const copy_help = try tier0.allocator.dupeZ(u8, std.mem.span(command.help_string));
         errdefer tier0.allocator.free(copy_help);
 
-        var copy_cmd: tier1.ConCommand.Data = command;
-        copy_cmd.name = copy_name;
-        copy_cmd.help_string = copy_help;
+        const copy_cmd: tier1.ConCommand.Data = .{
+            .name = copy_name,
+            .help_string = copy_help,
+            .flags = command.flags,
+            .command_callback = vkrkCommandCallback,
+            .completion_callback = null,
+        };
 
         const result = try tier0.allocator.create(DynConCommand);
         result.* = DynConCommand{
-            .cmd= tier1.ConCommand.init(copy_cmd),
+            .cmd = tier1.ConCommand.init(copy_cmd),
+            .callback = command.callback,
         };
 
         return result;
@@ -576,12 +674,12 @@ const DynConCommand = struct {
         self.cmd.register();
 
         self.next = DynConCommand.cmds;
-        DynConCommand.cmds= self;
+        DynConCommand.cmds = self;
     }
 
     fn deinit(self: *DynConCommand) void {
-        tier0.allocator.free(std.mem.span(self.cmd.base1.name));
-        tier0.allocator.free(std.mem.span(self.cmd.base1.help_string));
+        tier0.allocator.free(std.mem.span(self.cmd.base.name));
+        tier0.allocator.free(std.mem.span(self.cmd.base.help_string));
     }
 };
 
@@ -592,6 +690,15 @@ pub fn destroyDynCommands() void {
         curr.deinit();
 
         cvar = curr.next;
+        tier0.allocator.destroy(curr);
+    }
+
+    var command = DynConCommand.cmds;
+    while (command) |curr| {
+        tier1.icvar.unregisterConCommand(@ptrCast(&curr.cmd));
+        curr.deinit();
+
+        command = curr.next;
         tier0.allocator.destroy(curr);
     }
 }
