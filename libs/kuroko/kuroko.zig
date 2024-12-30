@@ -40,7 +40,7 @@ pub const KrkValue = packed struct(u64) {
     extern "c" fn krk_callValue(callee: KrkValue, arg_count: c_int, callable_on_stack: c_int) c_int;
     extern "c" fn krk_isFalsey(value: KrkValue) c_int;
     extern "c" fn krk_valueGetAttribute(value: KrkValue, name: [*:0]const u8) KrkValue;
-    extern "c" fn krk_valueGetAttribute_default(value: KrkValue, name: [*:0]u8, default_val: KrkValue) KrkValue;
+    extern "c" fn krk_valueGetAttribute_default(value: KrkValue, name: [*:0]const u8, default_val: KrkValue) KrkValue;
     extern "c" fn krk_valueSetAttribute(owner: KrkValue, name: [*:0]const u8, to: KrkValue) KrkValue;
     extern "c" fn krk_valueDelAttribute(owner: KrkValue, name: [*:0]const u8) KrkValue;
     extern "c" fn krk_unpackIterable(
@@ -1391,9 +1391,9 @@ pub const KrkList = extern struct {
     inst: KrkInstance,
     values: KrkValueArray,
 
-    extern "c" fn krk_list_of(argc: c_int, argv: [*]const KrkValue, hasKw: c_int) KrkValue;
+    extern "c" fn krk_list_of(argc: c_int, argv: ?[*]const KrkValue, hasKw: c_int) KrkValue;
 
-    pub inline fn listOf(argc: c_int, argv: [*]const KrkValue, has_kw: bool) KrkValue {
+    pub inline fn listOf(argc: c_int, argv: ?[*]const KrkValue, has_kw: bool) KrkValue {
         return krk_list_of(argc, argv, @intFromBool(has_kw));
     }
 };
@@ -1405,9 +1405,9 @@ pub const KrkDict = extern struct {
     inst: KrkInstance,
     entries: KrkTable,
 
-    extern "c" fn krk_dict_of(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) KrkValue;
+    extern "c" fn krk_dict_of(argc: c_int, argv: ?[*]const KrkValue, has_kw: c_int) KrkValue;
 
-    pub inline fn dictOf(argc: c_int, argv: [*]const KrkValue, has_kw: bool) KrkValue {
+    pub inline fn dictOf(argc: c_int, argv: ?[*]const KrkValue, has_kw: bool) KrkValue {
         return krk_dict_of(argc, argv, @intFromBool(has_kw));
     }
 };
@@ -1435,9 +1435,9 @@ pub const Set = extern struct {
     inst: KrkInstance,
     entries: KrkTable,
 
-    extern "c" fn krk_set_of(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) KrkValue;
+    extern "c" fn krk_set_of(argc: c_int, argv: ?[*]const KrkValue, has_kw: c_int) KrkValue;
 
-    pub inline fn setOf(argc: c_int, argv: [*]const KrkValue, has_kw: bool) KrkValue {
+    pub inline fn setOf(argc: c_int, argv: ?[*]const KrkValue, has_kw: bool) KrkValue {
         return krk_set_of(argc, argv, @intFromBool(has_kw));
     }
 };
@@ -1460,9 +1460,9 @@ pub const KrkSlice = extern struct {
     end: KrkValue,
     step: KrkValue,
 
-    extern "c" fn krk_slice_of(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) KrkValue;
+    extern "c" fn krk_slice_of(argc: c_int, argv: ?[*]const KrkValue, has_kw: c_int) KrkValue;
 
-    pub inline fn sliceOf(argc: c_int, argv: [*]const KrkValue, has_kw: c_int) KrkValue {
+    pub inline fn sliceOf(argc: c_int, argv: ?[*]const KrkValue, has_kw: c_int) KrkValue {
         return krk_slice_of(argc, argv, @intFromBool(has_kw));
     }
 };
