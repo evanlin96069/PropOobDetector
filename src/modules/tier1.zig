@@ -93,7 +93,10 @@ pub const ConCommand = extern struct {
     } = .{},
 
     pub const CommandCallbackFn = *const fn (args: *const CCommand) callconv(.C) void;
-    pub const CommandCompletionCallbackFn = *const fn (partial: [*:0]const u8, commands: [*][*]u8) callconv(.C) void;
+
+    pub const completion_max_items = 64;
+    pub const completion_item_length = 64;
+    pub const CommandCompletionCallbackFn = *const fn (partial: [*:0]const u8, commands: *[completion_max_items][completion_item_length]u8) callconv(.C) c_int;
 
     pub const Data = struct {
         name: [*:0]const u8,
