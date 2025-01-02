@@ -258,7 +258,7 @@ pub const KrkValue = packed struct(u64) {
             count: usize,
         ) callconv(.C) c_int,
     ) bool {
-        return unpackIterable(iterable, context, callback) == 1;
+        return krk_unpackIterable(iterable, context, callback) == 1;
     }
 
     pub inline fn noneValue() KrkValue {
