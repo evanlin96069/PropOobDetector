@@ -7,8 +7,6 @@ const tier1 = modules.tier1;
 const vgui = modules.vgui;
 const engine = modules.engine;
 
-const datamap = @import("datamap.zig");
-
 const Color = @import("sdk").Color;
 
 const Feature = @import("Feature.zig");
@@ -45,63 +43,6 @@ fn cmd_debug_Fn(args: *const tier1.CCommand) callconv(.C) void {
     var i: u32 = 0;
     while (i < args.argc) : (i += 1) {
         std.log.info("argv[{d}] = \"{s}\"", .{ i, args.argv[i] });
-    }
-}
-
-var vkrk_datamap_print = tier1.ConCommand.init(.{
-    .name = "vkrk_datamap_print",
-    .flags = .{
-        .hidden = true,
-    },
-    .help_string = "Prints all datamaps.",
-    .command_callback = datamap_print_Fn,
-});
-
-fn datamap_print_Fn(args: *const tier1.CCommand) callconv(.C) void {
-    _ = args;
-
-    var server_it = datamap.server_map.iterator();
-    std.log.info("Server datamaps:", .{});
-    while (server_it.next()) |kv| {
-        std.log.info("    {s}", .{kv.key_ptr.*});
-    }
-
-    var client_it = datamap.client_map.iterator();
-    std.log.info("Client datamaps:", .{});
-    while (client_it.next()) |kv| {
-        std.log.info("    {s}", .{kv.key_ptr.*});
-    }
-}
-
-var vkrk_datamap_walk = tier1.ConCommand.init(.{
-    .name = "vkrk_datamap_walk",
-    .flags = .{
-        .hidden = true,
-    },
-    .help_string = "Walk through a datamap and print all offsets.",
-    .command_callback = datamap_walk_Fn,
-});
-
-fn datamap_walk_Fn(args: *const tier1.CCommand) callconv(.C) void {
-    if (args.argc != 2) {
-        std.log.info("Usage: vkrk_datamap_walk <class name>", .{});
-        return;
-    }
-
-    if (datamap.server_map.get(args.args(1))) |map| {
-        std.log.info("Server map:", .{});
-        var it = map.iterator();
-        while (it.next()) |kv| {
-            std.log.info("    {s}: {d}", .{ kv.key_ptr.*, kv.value_ptr.* });
-        }
-    }
-
-    if (datamap.client_map.get(args.args(1))) |map| {
-        std.log.info("Client map:", .{});
-        var it = map.iterator();
-        while (it.next()) |kv| {
-            std.log.info("    {s}: {d}", .{ kv.key_ptr.*, kv.value_ptr.* });
-        }
     }
 }
 
@@ -147,9 +88,6 @@ fn onSessionStart() void {
 }
 
 fn init() bool {
-    vkrk_datamap_print.register();
-    vkrk_datamap_walk.register();
-
     vkrk_hud_debug.register();
     vkrk_cmd_debug.register();
 

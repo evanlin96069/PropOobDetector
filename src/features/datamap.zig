@@ -1,6 +1,9 @@
 const std = @import("std");
 
-const tier0 = @import("../modules.zig").tier0;
+const modules = @import("../modules.zig");
+const tier0 = modules.tier0;
+const tier1 = modules.tier1;
+const ConCommand = tier1.ConCommand;
 
 const Feature = @import("Feature.zig");
 
@@ -132,6 +135,57 @@ const datamap_patterns = zhook.mem.makePatterns(.{
     "C7 05 ?? ?? ?? ?? ?? ?? ?? ?? B8 ?? ?? ?? ?? C7 05",
 });
 
+var vkrk_datamap_print = ConCommand.init(.{
+    .name = "vkrk_datamap_print",
+    .help_string = "Prints all datamaps.",
+    .command_callback = datamap_print_Fn,
+});
+
+fn datamap_print_Fn(args: *const tier1.CCommand) callconv(.C) void {
+    _ = args;
+
+    var server_it = server_map.iterator();
+    std.log.info("Server datamaps:", .{});
+    while (server_it.next()) |kv| {
+        std.log.info("    {s}", .{kv.key_ptr.*});
+    }
+
+    var client_it = client_map.iterator();
+    std.log.info("Client datamaps:", .{});
+    while (client_it.next()) |kv| {
+        std.log.info("    {s}", .{kv.key_ptr.*});
+    }
+}
+
+var vkrk_datamap_walk = ConCommand.init(.{
+    .name = "vkrk_datamap_walk",
+    .help_string = "Walk through a datamap and print all offsets.",
+    .command_callback = datamap_walk_Fn,
+});
+
+fn datamap_walk_Fn(args: *const tier1.CCommand) callconv(.C) void {
+    if (args.argc != 2) {
+        std.log.info("Usage: vkrk_datamap_walk <class name>", .{});
+        return;
+    }
+
+    if (server_map.get(args.args(1))) |map| {
+        std.log.info("Server map:", .{});
+        var it = map.iterator();
+        while (it.next()) |kv| {
+            std.log.info("    {s}: {d}", .{ kv.key_ptr.*, kv.value_ptr.* });
+        }
+    }
+
+    if (client_map.get(args.args(1))) |map| {
+        std.log.info("Client map:", .{});
+        var it = map.iterator();
+        while (it.next()) |kv| {
+            std.log.info("    {s}: {d}", .{ kv.key_ptr.*, kv.value_ptr.* });
+        }
+    }
+}
+
 pub var feature: Feature = .{
     .name = "datamap",
     .shouldLoad = shouldLoad,
@@ -185,6 +239,9 @@ fn init() bool {
             };
         }
     }
+
+    vkrk_datamap_print.register();
+    vkrk_datamap_walk.register();
 
     return true;
 }
