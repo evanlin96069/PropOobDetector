@@ -13,6 +13,8 @@ const KrkList = kuroko.KrkList;
 const KrkInstance = kuroko.KrkInstance;
 const KrkClass = kuroko.KrkClass;
 
+const str_utils = @import("../../utils/str_utils.zig");
+
 pub fn bindAttributes(module: *KrkInstance) void {
     module.bindFunction("cmd", cmd).setDoc(
         \\@brief Runs a console command.
@@ -679,10 +681,8 @@ const DynConCommand = struct {
                 return 1;
             }
 
-            const s = value.asString().chars;
-            const truncated = std.mem.span(s)[0..@min(tier1.ConCommand.completion_item_length - 1, std.mem.len(s))];
-            std.mem.copyForwards(u8, &completion.commands[completion.count], truncated);
-            completion.commands[completion.count][truncated.len] = 0;
+            const s = std.mem.span(value.asString().chars);
+            str_utils.copyToBufferZ(u8, &completion.commands[completion.count], s);
             completion.count += 1;
         }
 

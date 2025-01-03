@@ -2,6 +2,7 @@ const std = @import("std");
 
 const interfaces = @import("../interfaces.zig");
 const tier0 = @import("tier0.zig");
+const FileCompletion = @import("../utils/completion.zig").FileCompletion;
 
 const Module = @import("Module.zig");
 
@@ -477,4 +478,6 @@ fn deinit() void {
     while (it) |curr| : (it = curr.next) {
         curr.deinit();
     }
+
+    FileCompletion.deinitAll();
 }
