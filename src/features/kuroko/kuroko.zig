@@ -5,7 +5,9 @@ const Feature = @import("../Feature.zig");
 const modules = @import("../../modules.zig");
 const tier0 = modules.tier0;
 const tier1 = modules.tier1;
+const ConCommand = tier1.ConCommand;
 const engine = modules.engine;
+const FileCompletion = @import("../../utils/completion.zig").FileCompletion;
 
 const kuroko = @import("kuroko");
 const VM = kuroko.KrkVM;
@@ -28,7 +30,7 @@ const krk_from_file = "<console>";
 
 var krk_path: [*:0]const u8 = undefined;
 
-var vkrk_interpret = tier1.ConCommand.init(.{
+var vkrk_interpret = ConCommand.init(.{
     .name = "vkrk_interpret",
     .help_string = "Runs the text as a Kuroko script.",
     .command_callback = vkrk_interpret_Fn,
@@ -58,10 +60,11 @@ fn vkrk_interpret_Fn(args: *const tier1.CCommand) callconv(.C) void {
     VM.resetStack();
 }
 
-var vkrk_run = tier1.ConCommand.init(.{
+var vkrk_run = ConCommand.init(.{
     .name = "vkrk_run",
     .help_string = "Runs a Kuroko script file.",
     .command_callback = vkrk_run_Fn,
+    .completion_callback = vkrk_run_completionFn,
 });
 
 fn vkrk_run_Fn(args: *const tier1.CCommand) callconv(.C) void {
@@ -90,7 +93,22 @@ fn vkrk_run_Fn(args: *const tier1.CCommand) callconv(.C) void {
     VM.resetStack();
 }
 
-var krk_reset = tier1.ConCommand.init(.{
+fn vkrk_run_completionFn(
+    partial: [*:0]const u8,
+    commands: *[ConCommand.completion_max_items][ConCommand.completion_item_length]u8,
+) callconv(.C) c_int {
+    const S = struct {
+        var completion = FileCompletion.init(
+            "vkrk_run",
+            "kuroko",
+            ".krk",
+        );
+    };
+
+    return S.completion.complete(partial, commands);
+}
+
+var krk_reset = ConCommand.init(.{
     .name = "vkrk_reset",
     .help_string = "Resets the Kuroko VM.",
     .command_callback = krk_reset_Fn,
