@@ -97,7 +97,10 @@ pub const ConCommand = extern struct {
 
     pub const completion_max_items = 64;
     pub const completion_item_length = 64;
-    pub const CommandCompletionCallbackFn = *const fn (partial: [*:0]const u8, commands: *[completion_max_items][completion_item_length]u8) callconv(.C) c_int;
+    pub const CommandCompletionCallbackFn = *const fn (
+        partial: [*:0]const u8,
+        commands: *[completion_max_items][completion_item_length]u8,
+    ) callconv(.C) c_int;
 
     pub const Data = struct {
         name: [*:0]const u8,
@@ -134,6 +137,11 @@ pub const ConCommand = extern struct {
             },
             .command_callback = cmd.command_callback,
             .completion_callback = cmd.completion_callback,
+            .callback_flags = .{
+                .has_completion_callback = cmd.completion_callback != null,
+                .using_new_command_callback = true,
+                .using_command_callback_interface = false,
+            },
         };
     }
 
@@ -197,6 +205,7 @@ pub const ConVar = extern struct {
 
     const VTable = extern struct {
         base: ConCommandBase.VTable,
+        _setString: *const anyopaque,
         _setFloat: *const anyopaque,
         _setInt: *const anyopaque,
         clampValue: *const anyopaque,
